@@ -1,0 +1,9 @@
+imutils==0.5.4
+paho-mqtt==2.1.0
+PyYAML==6.0.2
+requests==2.32.3
+uiprotect==7.5.1
+urllib3==2.4.0
+uuid==1.30
+watchdog==6.0.0
+websockets==15.0.1
