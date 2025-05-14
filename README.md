@@ -40,21 +40,18 @@ The solution executes a simple process flow where each task is completed sequent
 ```mermaid
 flowchart LR;
     Start@{ shape: circle, label: "Trigger" }
-    Task1(Create<br/> Working Folder);
-    Task2(Export<br/> Sensor Logs);
-    Task3(Export<br/> Video Clips);
-    Task4(Analyze<br/> Video Clips);
-    Task5(Generate<br/> HTML);
-    Task6(Publish<br/> Artifacts);
-    End@{ shape: dbl-circ, label: "Incident<br/> Report" };
+    Task1(Create<br> Working Folder);
+    Task2(Export<br> Sensor Logs);
+    Task3(Export<br> Video Clips);
+    Task4(Analyze<br> Video Clips);
+    Task5(Generate<br> HTML);
+    Task6(Publish<br> Artifacts);
+    End@{ shape: dbl-circ, label: "Incident<br> Report" };
+
+    Start-->Task1-->Task2-->Task3;
     
-    Start-->Task1;
-    Task1-->Task2;
-    Task2-->Task3;
-    Task3-->Task4;
-    Task4-->Task5;
-    Task5-->Task6;
-    Task6-->End;
+    %% Line wrap happens here
+    Task3-->Task4-->Task5-->Task6-->End;
 ```
 
 Each task uses the Pub/Sub Pattern to trigger it's execute and publish results to an
