@@ -1,15 +1,12 @@
 """
-task_sensor_log_handler.py
+task_video_clip_fetcher.py
 
 Subscribes to an MQTT topic and exports video clips 
 from the NVR based on timestamps in published messages
 """
-import time
 import asyncio
-import urllib.parse
 import json
-from datetime import datetime, timedelta
-from types import SimpleNamespace
+from datetime import datetime
 from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, load_config
 
 
@@ -87,9 +84,6 @@ async def save_media(nvr_client, cams: list[dict[str, any]], dt, path: str):
 
         video_name = await nvr_client.save_video(cam_id, dt, filename, DELTA_OFFSET)
         
-        # REMOVE ONCE CLASSIFIER IS WORKING
-        still_name = await nvr_client.save_still(cam_id, dt, filename)
-
         output_files.append(video_name)
         print(f"  Saved video: {video_name}\n")
 

@@ -52,7 +52,7 @@ class Protect:
         await self.destroy_client()
 
         if pic is not None:
-            binary_file = open(fq_filename + ".jpg", "wb")
+            binary_file = open(fq_filename, "wb")
             binary_file.write(pic)
             binary_file.close()
         else:
