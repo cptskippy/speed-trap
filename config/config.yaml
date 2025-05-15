@@ -1,0 +1,76 @@
+servers:
+  mqtt:
+    uri_evar: "MQTT_URI"
+    username_evar: "MQTT_USERNAME"
+    password_evar: "MQTT_PASSWORD"
+    qos: 2
+    topics:
+
+  homeassistant:
+    websocket_uri_evar: "HA_WEBSOCKET_URI"
+    rest_uri_evar: "HA_REST_URI"
+    token_evar: "HA_TOKEN"
+    query_template: "/history/period/{}?end_time={}&filter_entity_id={}&minimal_response&no_attributes"
+
+  unifi_protect:
+    uri_evar: "NVR_URI"
+    username_evar: "NVR_USERNAME"
+    password_evar: "NVR_PASSWORD"
+    camera_names_evar: "NVR_CAMERA_NAMES"
+
+media:
+  output_path: "./media/" # internal path used to prepare assets
+  output_folder_format: "%Y%m%d%H%M%S"
+
+sensor:
+  id_evar: "SENSOR_ID"
+  trigger_threshold: 25
+  error_threshold: 10.0
+
+task:
+  folder_setup:
+    mqtt:
+      client_id: "folder_setup"
+      topics:
+        subscribe: "task/folder"
+        publish: "task/log"
+        error: "task/error"
+
+  sensor_log_handler:
+    delta_offset: 10 # number of seconds before and after incident to save
+    wait_period: 60 # number of seconds to wait before trying to retrieve data
+    mqtt:
+      client_id: "sensor_log_handler"
+      topics:
+        subscribe: "task/log"
+        publish: "task/video"
+        error: "task/error"
+
+  video_clip_fetcher:
+    delta_offset: 10 # number of seconds before and after incident to save
+    wait_period: 0 # number of seconds to wait before trying to retrieve data
+    mqtt:
+      client_id: "video_clip_fetcher"
+      topics:
+        subscribe: "task/video"
+        publish: "task/classifier"
+        error: "task/error"
+
+  object_classifier:
+    mqtt:
+      client_id: "object_classifier"
+      topics:
+        subscribe: "task/classifier"
+        publish: "task/publisher"
+        error: "task/error"
+
+  report_publisher:
+    publish_path: "./publish/"
+    html_file_name_evar: "PUBLISH_HTML_FILE_NAME"
+    html_file_contents_evar: "PUBLISH_HTML_CONTENTS"
+    mqtt:
+      client_id: "report_publisher"
+      topics:
+        subscribe: "task/publisher"
+        publish: "task/notifier"
+        error: "task/error"

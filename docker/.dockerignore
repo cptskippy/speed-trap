@@ -39,7 +39,7 @@ MANIFEST
 docker/.env
 
 # Program input/output files
-#config/config.yaml
+config/config.yaml
 media/
 tests/
 models/
@@ -51,3 +51,7 @@ docker/tmp/
 # Scripts logs and data
 scripts/*.log
 scripts/tmp/
+
+# Git files (if not needed inside the image)
+.git/
+.gitignore

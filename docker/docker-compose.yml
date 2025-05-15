@@ -1,0 +1,57 @@
+# docker/docker-compose.yml
+services:
+  task_folder_setup:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file:
+      - ../.env
+    volumes:
+      - ../config/config.yaml:/app/config/config.yaml:ro
+      - ../media:/app/media
+    command: python -u task_folder_setup.py
+
+  task_sensor_log_handler:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file:
+      - ../.env
+    volumes:
+      - ../config/config.yaml:/app/config/config.yaml:ro
+      - ../media:/app/media
+    command: python -u task_sensor_log_handler.py
+
+  task_video_clip_fetcher:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file:
+      - ../.env
+    volumes:
+      - ../config/config.yaml:/app/config/config.yaml:ro
+      - ../media:/app/media
+    command: python -u task_video_clip_fetcher.py
+
+  task_object_classifier:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file:
+      - ../.env
+    volumes:
+      - ../config/config.yaml:/app/config/config.yaml:ro
+      - ../media:/app/media
+    command: python -u task_object_classifier.py
+
+  task_report_publisher:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file:
+      - ../.env
+    volumes:
+      - ../config/config.yaml:/app/config/config.yaml:ro
+      - ../media:/app/media
+      - ${PUBLISH_PATH}:/app/publish
+    command: python -u task_report_publisher.py

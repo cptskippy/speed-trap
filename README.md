@@ -71,6 +71,13 @@ flowchart TD;
   speed-trap/
   ├── config/  # project configuration
   │   └── config.yml
+  ├── docker/  # docker container definitions
+  │   ├── .dockerignore
+  │   ├── docker-compose.yml
+  │   └── Dockerfile
+  ├── scripts/  # docker build and run scripts
+  │   ├── build.sh
+  │   └── run.sh
   ├── shared/  # shared modules or helper classes
   │   └── *.py
   ├── .env  # secrets
