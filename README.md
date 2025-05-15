@@ -66,6 +66,19 @@ flowchart TD;
    Task-->Output;
 ```
 
+## Repository Structure
+```bash
+  speed-trap/
+  ├── config/  # project configuration
+  │   └── config.yml
+  ├── shared/  # shared modules or helper classes
+  │   └── *.py
+  ├── .env  # secrets
+  ├── .gitignore
+  ├── requirements.txt  # python dependencies
+  └── task_*.py  # pub/sub tasks monitiring queues
+```
+
 ## Task Overview
 Below is a general overview of what each task is intended to do.  Some 
 tasks are fully functional while others have no implementation or simply 
