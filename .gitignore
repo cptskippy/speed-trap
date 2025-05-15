@@ -1,6 +1,8 @@
-# Byte-compiled / optimized / DLL files
+# Bytecode and compiled files
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 *$py.class
 
 # C extensions
@@ -26,14 +28,26 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Ignore Python virtual environment
+# Python virtual environment
 .venv/
 
-# Ignore vscode files
+# Vscode files
 .vscode/
 
-# Ignore program input/output files
+# Secrets or environment-specific configs
+.env
+docker/.env
+
+# Program input/output files
 config/config.yaml
 media/
 tests/
 models/
+
+# Generated Docker logs and data
+docker/*.log
+docker/tmp/
+
+# Scripts logs and data
+scripts/*.log
+scripts/tmp/

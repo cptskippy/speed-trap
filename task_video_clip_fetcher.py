@@ -16,10 +16,9 @@ LOGGING = False
 
 # Load configuration from yaml
 config = load_config()
-mqtt_config = config["mqtt"]
-rest_config = config["rest"]
+mqtt_config = config["servers"]["mqtt"]
+protect_config = config["servers"]["unifi_protect"]
 task_config = config["task"]["video_clip_fetcher"]
-sensor_config = config["sensor"]
 
 # Populate configuration variables
 MQTT_URI = mqtt_config["uri"]
@@ -35,14 +34,13 @@ MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 DELTA_OFFSET = task_config["delta_offset"]
 WAIT_PERIOD = task_config["wait_period"]
 
-UI_HOST = task_config["nvr"]["host"]
-UI_PORT = task_config["nvr"]["port"]
-UI_USERNAME = task_config["nvr"]["username"]
-UI_PASSWORD = task_config["nvr"]["password"]
-CAMERA_NAMES = task_config["nvr"]["camera_names"]
+UI_URI = protect_config["uri"]
+UI_USERNAME = protect_config["username"]
+UI_PASSWORD = protect_config["password"]
+CAMERA_NAMES = protect_config["camera_names"]
 
 # Configure NVR client
-NVR_CLIENT = Protect(UI_HOST, UI_PORT, UI_USERNAME, UI_PASSWORD)
+NVR_CLIENT = Protect(UI_URI, UI_USERNAME, UI_PASSWORD)
 
 
 def on_connect(client, userdata, flags, reason_code, properties):

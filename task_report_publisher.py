@@ -19,8 +19,7 @@ LOGGING = False
 
 # Load configuration from yaml
 config = load_config()
-mqtt_config = config["mqtt"]
-rest_config = config["rest"]
+mqtt_config = config["servers"]["mqtt"]
 task_config = config["task"]["report_publisher"]
 media_config = config["media"]
 
@@ -35,7 +34,6 @@ MQTT_SUBSCRIBE_TOPIC = task_config["mqtt"]["topics"]["subscribe"]
 MQTT_PUBLISH_TOPIC = task_config["mqtt"]["topics"]["publish"]
 MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 
-FOLDER_PATH = media_config["output_path"]
 FOLDER_FORMAT = media_config["output_folder_format"]
 PUBLISH_PATH = task_config["publish_path"]
 PUBLISH_HTML_FILE_NAME = task_config["html_file_name"]
@@ -116,6 +114,3 @@ def handle_event(data):
 # Configure MQTT and wait...
 client = MqttClientWrapper(MQTT_URI, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD)
 client.connect(on_connect, on_message)
-
-
-##{"timestamp": "2025-05-14T19:57:21.382065+00:00", "speed": 0.0, "uom": "mph", "sensor_id": "sensor.speed", "folder": "./media/20250514125721", "data_file": "./media/20250514125721/data.json", "videos": ["./media/20250514125721/globalshutter.mpg", "./media/20250514125721/street.mpg", "./media/20250514125721/driveway.mpg"], "images": ["./media/20250514125721/globalshutter.jpg", "./media/20250514125721/street.jpg", "./media/20250514125721/driveway.jpg"]}

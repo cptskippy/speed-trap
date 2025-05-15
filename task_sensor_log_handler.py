@@ -8,7 +8,6 @@ import time
 import urllib.parse
 import json
 from datetime import datetime, timedelta
-from types import SimpleNamespace
 from shared import MqttClientWrapper, HomeAssistantRest, load_config
 
 
@@ -18,8 +17,8 @@ LOGGING = False
 
 # Load configuration from yaml
 config = load_config()
-mqtt_config = config["mqtt"]
-rest_config = config["rest"]
+mqtt_config = config["servers"]["mqtt"]
+ha_config = config["servers"]["homeassistant"]
 task_config = config["task"]["sensor_log_handler"]
 sensor_config = config["sensor"]
 
@@ -34,9 +33,9 @@ MQTT_SUBSCRIBE_TOPIC = task_config["mqtt"]["topics"]["subscribe"]
 MQTT_PUBLISH_TOPIC = task_config["mqtt"]["topics"]["publish"]
 MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 
-HA_TOKEN = rest_config["token"]
-HA_REST_URL = rest_config["endpoint"]
-HA_REST_QUERY_TEMPLATE = rest_config["query_template"]
+HA_TOKEN = ha_config["token"]
+HA_REST_URL = ha_config["rest_uri"]
+HA_REST_QUERY_TEMPLATE = ha_config["query_template"]
 HA_REST_CLIENT = HomeAssistantRest(
     url=HA_REST_URL,
     bearer_token=HA_TOKEN,

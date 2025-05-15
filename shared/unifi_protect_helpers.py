@@ -7,14 +7,17 @@ using uiprotect module.
 import asyncio
 from datetime import datetime
 from datetime import timedelta
+from urllib.parse import urlparse
 from uiprotect import ProtectApiClient
 
 class Protect:
     """Helper class with functions around the uiprotect library"""
-    def __init__(self, host: str, port: str,
-                 user_name: str, password: str):
-        self.host = host
-        self.port = port
+    def __init__(self, nvr_uri: str, user_name: str, password: str):
+        uri = urlparse(nvr_uri)
+
+        self.host = uri.hostname
+        self.port = uri.port
+
         self.user_name = user_name
         self.password = password
         self.client = None

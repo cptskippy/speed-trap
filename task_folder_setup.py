@@ -12,7 +12,7 @@ LOGGING = False
 
 # Load configuration from yaml
 config = load_config()
-mqtt_config = config["mqtt"]
+mqtt_config = config["servers"]["mqtt"]
 task_config = config["task"]["folder_setup"]
 media_config = config["media"]
 
@@ -29,8 +29,6 @@ MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 
 FOLDER_PATH = media_config["output_path"]
 FOLDER_FORMAT = media_config["output_folder_format"]
-
-state = SimpleNamespace(last_processed_time=datetime.now())
 
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""
