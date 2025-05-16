@@ -4,6 +4,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    environment:
+      - TZ=America/Los_Angeles
     env_file:
       - ../.env
     volumes:
@@ -15,6 +17,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    environment:
+      - TZ=America/Los_Angeles
     env_file:
       - ../.env
     volumes:
@@ -26,6 +30,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    environment:
+      - TZ=America/Los_Angeles
     env_file:
       - ../.env
     volumes:
@@ -37,6 +43,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    environment:
+      - TZ=America/Los_Angeles
     env_file:
       - ../.env
     volumes:
@@ -48,6 +56,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    environment:
+      - TZ=America/Los_Angeles
     env_file:
       - ../.env
     volumes:
