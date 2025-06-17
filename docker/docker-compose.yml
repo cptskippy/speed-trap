@@ -1,6 +1,6 @@
 # docker/docker-compose.yml
 services:
-  task_folder_setup:
+  task-folder-setup:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -13,7 +13,7 @@ services:
       - ../media:/app/media
     command: python -u task_folder_setup.py
 
-  task_sensor_log_handler:
+  task-sensor-log-handler:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -26,7 +26,7 @@ services:
       - ../media:/app/media
     command: python -u task_sensor_log_handler.py
 
-  task_video_clip_fetcher:
+  task-video-clip-fetcher:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -39,7 +39,7 @@ services:
       - ../media:/app/media
     command: python -u task_video_clip_fetcher.py
 
-  task_object_classifier:
+  task-object-classifier:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -52,7 +52,7 @@ services:
       - ../media:/app/media
     command: python -u task_object_classifier.py
 
-  task_report_publisher:
+  task-report-publisher:
     build:
       context: ..
       dockerfile: docker/Dockerfile

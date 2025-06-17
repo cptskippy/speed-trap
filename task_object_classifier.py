@@ -10,21 +10,42 @@ TODO::
 * Classify Objects using Model
 * Update MQTT with images & meta data
 """
-import asyncio
-import json
+import cv2
 from datetime import datetime
-from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, load_config
+import imutils
+import json
+import logging
+import os
+
+from shared import MqttClientWrapper, load_config
+from shared import VideoProcessor, load_config
 
 
-VERBOSE = False
-DEBUG = False
-LOGGING = False
+# logging.basicConfig(
+#     level=logging.DEBUG,  # or INFO, WARNING
+#     format='[%(levelname)s] %(name)s: %(message)s'
+# )
+
+logger = logging.getLogger(__name__)
+# logger.debug("Debug message")
+# logger.info("Info message")
+# logger.warning("Warning message")
 
 # Load configuration from yaml
 config = load_config()
 mqtt_config = config["servers"]["mqtt"]
-protect_config = config["servers"]["unifi_protect"]
 task_config = config["task"]["object_classifier"]
+
+video_clip_details = task_config["video_clip_details"]
+open_cv_settings = task_config["open_cv_settings"]
+dnn = open_cv_settings["deep_neural_network"]
+
+PROTOTXT = os.getcwd() + dnn["prototxt_path"]
+MODEL = os.getcwd() + dnn["model_path"]
+CLASSES = os.getcwd() + dnn["classes_path"]
+CLASSES_TO_TRACK = dnn["classes_to_track"] #Bicycle,Bus,Car,Motorbike
+CONFIDENCE_THRESHOLD = dnn["confidence_threshold"]
+
 
 # Populate configuration variables
 MQTT_URI = mqtt_config["uri"]
@@ -36,15 +57,6 @@ MQTT_CLIENT_ID = task_config["mqtt"]["client_id"]
 MQTT_SUBSCRIBE_TOPIC = task_config["mqtt"]["topics"]["subscribe"]
 MQTT_PUBLISH_TOPIC = task_config["mqtt"]["topics"]["publish"]
 MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
-
-UI_URI = protect_config["uri"]
-UI_USERNAME = protect_config["username"]
-UI_PASSWORD = protect_config["password"]
-CAMERA_NAMES = protect_config["camera_names"]
-
-# Configure NVR client
-NVR_CLIENT = Protect(UI_URI, UI_USERNAME, UI_PASSWORD)
-
 
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""
@@ -74,37 +86,38 @@ def on_message(client, userdata, message):
     except Exception as e:
         print(f"Error processing message: {e}")
 
-async def save_media(nvr_client, cams: list[dict[str, any]], dt, path: str):
-    """Retrieves images from specified cameras"""
-    output_files = []
-
-    for camera in cams:
-
-        filename = path  + "/" + camera["filename"]
-        cam_id = camera["id"]
-        print(f"  For camera: {cam_id}")
-
-        still_name = await nvr_client.save_still(cam_id, dt, filename)
-
-        output_files.append(still_name)
-        print(f"  Saved image: {still_name}\n")
-
-    return output_files
-
 def handle_event(data):
-    """Creates a folder based on the timestamp of the event"""
+    # {
+    #     "timestamp": "2025-06-10T22:47:44", 
+    #     "speed": 28.6, 
+    #     "uom": "mph", 
+    #     "sensor_id": "sensor.speedometer_speed", 
+    #     "folder": "./media/20250610224744", 
+    #     "data_file": "./media/20250610224744/data.json", 
+    #     "videos": [
+    #         "./media/20250610224744/globalshutter.mpg", 
+    #         "./media/20250610224744/street.mpg", 
+    #         "./media/20250610224744/driveway.mpg"
+    #     ]
+    # }
 
+    
     # Convert timestamp to string
     timestamp = data.get("timestamp")
     occurred = datetime.fromisoformat(timestamp)
 
     try:
-        print("Saving media...")
-        folder = data.get("folder")
-        images = asyncio.run(save_media(NVR_CLIENT, cameras, occurred, folder))
+        print("Fetching media...")
+        videos = data.get("videos")
+
+        # VideoProcessor
+        vp = VideoProcessor(PROTOTXT, MODEL, CLASSES, CLASSES_TO_TRACK, CONFIDENCE_THRESHOLD)
+
+        images = vp.process_videos(videos, video_clip_details)
 
         # Update Payload
         data["images"] = images
+        
         payload = json.dumps(data)
         print(f"  New Payload: {payload}")
 
@@ -112,7 +125,7 @@ def handle_event(data):
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
         print(f"  Message Published: {MQTT_PUBLISH_TOPIC}")
 
-    except ProtectMediaNotAvailable as e:
+    except Exception as e:
         print("Media Not Available.")
         print(e)
 
@@ -123,9 +136,6 @@ def handle_event(data):
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
         print(f"  Error Message Published: {MQTT_ERROR_TOPIC}")
 
-
-# Retrieve a list of cameras from the NVR
-cameras = asyncio.run(NVR_CLIENT.get_cameras(CAMERA_NAMES))
 
 # Configure MQTT and wait...
 client = MqttClientWrapper(MQTT_URI, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD)

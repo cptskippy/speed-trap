@@ -70,7 +70,7 @@ def on_message(client, userdata, message):
     except Exception as e:
         print(f"Error processing message: {e}")
 
-async def save_media(nvr_client, cams: list[dict[str, any]], dt, path: str):
+async def save_media(nvr_client, cams: list[dict[str, str]], dt, path: str):
     """Retrieves videos from specified cameras and the specified times of the length defined"""
     output_files = []
 

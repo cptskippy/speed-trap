@@ -9,4 +9,8 @@ from .mqtt_client_wrapper import MqttClientWrapper
 from .config_loader import load_config
 from .home_assistant_api_helper import HomeAssistantRest, HomeAssistantWebSocket
 from .unifi_protect_helpers import Protect, ProtectMediaNotAvailable
+from . import opencv_detection_helpers
+from . import opencv_contours_clustering
+from .opencv_classifier import Classifier, Detection
+from .video_processor import VideoProcessor
 

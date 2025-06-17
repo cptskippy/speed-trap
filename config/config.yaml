@@ -57,6 +57,51 @@ task:
         error: "task/error"
 
   object_classifier:
+    video_clip_details:
+      - camera_name: "Street"
+        file_name: "street.mpg"
+        thumbnail_max_height: 150
+        minimum_contour_area: 22000 #50 # smallest size object to detect in a video
+        perform_lpr: false
+        detection_thresholds: # two or more thresholds
+          #- [[x1,y1],[x2,y2]]  # two points forming a line
+          - [[199, 440], [622, 360]]
+          - [[1126, 412], [659, 652]]
+        exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
+          - [[0, 295], [173, 269], [482, 243], [752, 245], [1136, 244], [1664, 274], [1920, 293], [1920, 0], [0, 0]]
+          - [[1920, 921], [846, 703], [76, 466], [0, 428], [0, 1080], [1920, 1080]]
+          - [[1169, 771], [1176, 603], [1119, 544], [1094, 481], [1103, 433], [1146, 422], [1122, 307], [1146, 205], [1182, 133], [1220, 68], [1232, 0], [1458, 0], [1640, 80], [1680, 276], [1688, 412], [1666, 511], [1634, 579], [1597, 632], [1425, 660], [1392, 674], [1377, 810]]
+      - camera_name: "Global Shutter"
+        file_name: "globalshutter.mpg"
+        thumbnail_max_height: 150
+        minimum_contour_area: 22000 #50 # smallest size object to detect in a video
+        perform_lpr: true
+        detection_thresholds: # two or more thresholds
+          #- [[x1,y1],[x2,y2]]  # two points forming a line
+          - [[5, 642], [881, 3]]
+          - [[1350, 336], [394, 1085]]
+        exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
+          - [[0, 643], [173, 573], [393, 976], [388, 1088], [0, 1088]]
+      - camera_name: "Driveway"
+        file_name: "driveway.mpg"
+        thumbnail_max_height: 150
+        minimum_contour_area: 22000 #50 # smallest size object to detect in a video
+        perform_lpr: false
+        detection_thresholds: # two or more thresholds
+          #- [[x1,y1],[x2,y2]]  # two points forming a line
+          - [[212, 261], [442, 612]]
+          - [[712, 191], [1063, 368]]
+        exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
+          - [[0, 712], [871, 514], [1501, 354], [1628, 310], [1692, 215], [1920, 250], [1920, 1080], [0, 1080]]
+          - [[0, 160], [400, 112], [791, 73], [1029, 66], [1244, 71], [1475, 75], [1622, 98], [1791, 141], [1920, 171], [1920, 0], [0, 0]]
+          - [[1392, 386], [1380, 269], [1348, 261], [1328, 234], [1196, 198], [1140, 152], [1074, 70], [1055, 1], [1614, 4], [1675, 44], [1669, 110], [1646, 139], [1613, 203], [1584, 224], [1461, 249], [1447, 341], [1448, 394]]
+    open_cv_settings:
+      deep_neural_network:
+        model_path: "/models/MobileNetSSD_deploy.caffemodel" # your caffemodel
+        prototxt_path: "/models/MobileNetSSD_deploy.prototxt" # your prototxt file
+        classes_path: "/models/MobileNetSSD_deploy.synset" # your synset file
+        classes_to_track: [2,6,7,14] # classes from your synset file to track
+        confidence_threshold: 0.9
     mqtt:
       client_id: "object_classifier"
       topics:
