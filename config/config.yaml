@@ -111,6 +111,7 @@ task:
 
   report_publisher:
     publish_path: "./publish/"
+    publish_url_template_evar: "PUBLISH_URL_TEMPLATE"
     html_file_name_evar: "PUBLISH_HTML_FILE_NAME"
     html_file_contents_evar: "PUBLISH_HTML_CONTENTS"
     mqtt:

@@ -36,6 +36,7 @@ MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 
 FOLDER_FORMAT = media_config["output_folder_format"]
 PUBLISH_PATH = task_config["publish_path"]
+PUBLISH_URL_TEMPLATE = task_config["publish_url_template"]
 PUBLISH_HTML_FILE_NAME = task_config["html_file_name"]
 PUBLISH_HTML_FILE_CONTENTS = task_config["html_file_contents"]
 
@@ -51,7 +52,7 @@ def on_message(client, userdata, message):
     try:
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
-        print("\nReporting Event Received:")
+        print("\nPublishing Event Received:")
         print(f"  Timestamp: {data.get('timestamp')}")
         print(f"  Sensor ID: {data.get('sensor_id')}")
         print(f"  Speed: {data.get('speed')} {data.get('uom')}")
@@ -103,6 +104,7 @@ def handle_event(data):
     print("  Files published")
 
     # Update Payload
+    data["url"] = PUBLISH_URL_TEMPLATE.format(dts)
     data["page"] = page
     payload = json.dumps(data)
     print(f"  New Payload: {payload}")

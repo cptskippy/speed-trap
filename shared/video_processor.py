@@ -265,7 +265,8 @@ class VideoProcessor:
 
 
     def process_videos(self, videos, video_clip_details):
-        result = []
+        images = []
+        thumbs = []
 
         # Build mapping from the  to full paths
         video_file_map = {os.path.basename(p): p for p in videos}
@@ -292,9 +293,10 @@ class VideoProcessor:
                 print(f"Saving image for camera: {camera_name}")
                 image = self.process_video(image_name, video_name, min_contour_area, thresholds, ex_zones)
 
-                if result is not None:
+                if image is not None:
                     cv2.imwrite(filename=image_name, img=image)
                     cv2.imwrite(filename=thumb_name, img=imutils.resize(image, height=thumb_size))
-                    result.append(image_name)
+                    images.append(image_name)
+                    thumbs.append(thumb_name)
         
-        return result
+        return [images, thumbs]

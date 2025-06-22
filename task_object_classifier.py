@@ -113,21 +113,27 @@ def handle_event(data):
         # VideoProcessor
         vp = VideoProcessor(PROTOTXT, MODEL, CLASSES, CLASSES_TO_TRACK, CONFIDENCE_THRESHOLD)
 
-        images = vp.process_videos(videos, video_clip_details)
+        images, thumbs = vp.process_videos(videos, video_clip_details)
+
+        print(f"  Images: {images}")
+        print(f"  Thumbs: {thumbs}")
 
         # Update Payload
         data["images"] = images
+        data["thumbnails"] = thumbs
+
+        print(f"  Appending Payload...")
         
         payload = json.dumps(data)
         print(f"  New Payload: {payload}")
 
         # Publish message for next task
+        print(f"  Publishing Message...")
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
         print(f"  Message Published: {MQTT_PUBLISH_TOPIC}")
 
     except Exception as e:
-        print("Media Not Available.")
-        print(e)
+        print(f"Exception Occurred: {e}")
 
         # Update Payload
         data["error"] = e
