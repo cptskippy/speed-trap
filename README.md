@@ -93,22 +93,19 @@ do not exist.  The Orchestration method for the tasks has not been
 established and will be developed in the future.
 
 ### task_folder_setup.py
-Create a working folder
+Creates a working folder
 
 ### task_sensor_log_handler.py
-Export Home Assistant sensor logs
+Exports Home Assistant sensor logs to JSON
 
 ### task_video_clip_fetcher.py
-Export video clips from Unifi Protect
+Exports video clips from Unifi Protect to MPG files
 
 ### task_object_classifier.py
-Analyze videos using OpenCV
-
-### <TBD>
-Generate a .NET Razor Page partial
+Analyze videos using OpenCV and extracts images and thumbnails
 
 ### task_report_publisher.py
-Publish results
+Generates an HTML file, publishes artifacts, and sends notifcation of completion
 
 ## Motivation and Intent
 The block I live on has nearly a dozen children under the age of 10 
