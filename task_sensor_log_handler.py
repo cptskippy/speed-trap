@@ -48,6 +48,7 @@ ERRONEOUS_DATA_THRESHOLD = sensor_config["error_threshold"]
 
 DELTA_OFFSET = task_config["delta_offset"]
 WAIT_PERIOD = task_config["wait_period"]
+FILE_NAME = task_config["file_name"]
 
 
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -147,7 +148,7 @@ def handle_event(data):
 
     # Save data to disk
     folder = data.get("folder")
-    data_file = f"{folder}/data.json"
+    data_file = f"{folder}/{FILE_NAME}"
     print(f"  Save file: {data_file}")
 
     with open(data_file, "w", encoding="utf-8") as f:

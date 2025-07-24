@@ -34,6 +34,7 @@ MQTT_SUBSCRIBE_TOPIC = task_config["mqtt"]["topics"]["subscribe"]
 MQTT_PUBLISH_TOPIC = task_config["mqtt"]["topics"]["publish"]
 MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 
+FOLDER_PATH = media_config["output_path"]
 FOLDER_FORMAT = media_config["output_folder_format"]
 PUBLISH_PATH = task_config["publish_path"]
 PUBLISH_URL_TEMPLATE = task_config["publish_url_template"]
@@ -83,6 +84,30 @@ def generate_html_page(folder_name):
 def handle_event(data):
     """Creates a folder based on the timestamp of the event"""
 
+    # {
+    #   "timestamp": "2025-06-22T22:46:56.524103+00:00",
+    #   "speed": 27.96170365068,
+    #   "uom": "mph",
+    #   "sensor_id": "sensor.speedometer_speed",
+    #   "folder": "./media/20250622154656",
+    #   "data_file": "./media/20250622154656/data.json",
+    #   "videos": [
+    #     "./media/20250622154656/globalshutter.mpg",
+    #     "./media/20250622154656/street.mpg",
+    #     "./media/20250622154656/driveway.mpg"
+    #   ],
+    #   "images": [
+    #     "./media/20250622154656/street.png",
+    #     "./media/20250622154656/globalshutter.png",
+    #     "./media/20250622154656/driveway.png"
+    #   ],
+    #   "thumbnails": [
+    #     "./media/20250622154656/street_thumb.png",
+    #     "./media/20250622154656/globalshutter_thumb.png",
+    #     "./media/20250622154656/driveway_thumb.png"
+    #   ]
+    # }
+
     # Convert timestamp to string
     timestamp = data.get("timestamp")
     occurred = datetime.fromisoformat(timestamp)
@@ -103,9 +128,17 @@ def handle_event(data):
     shutil.copytree(src=folder, dst=publish_folder, dirs_exist_ok=True)
     print("  Files published")
 
+    # Generate URLs
+    url = PUBLISH_URL_TEMPLATE.format(dts) + "/"
+
+    first_thumb = url
+    if "thumbnails" in data and isinstance(data["thumbnails"], list) and data["thumbnails"]:
+        first_thumb = PUBLISH_URL_TEMPLATE.format(data["thumbnails"][0].replace(FOLDER_PATH,""))
+
     # Update Payload
-    data["url"] = PUBLISH_URL_TEMPLATE.format(dts)
     data["page"] = page
+    data["url"] = url
+    data["url_thumb"] = first_thumb
     payload = json.dumps(data)
     print(f"  New Payload: {payload}")
 
