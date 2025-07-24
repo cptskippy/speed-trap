@@ -43,6 +43,7 @@ docker/.env
 media/
 tests/
 models/
+publish/
 
 # Generated Docker logs and data
 docker/*.log
