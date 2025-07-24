@@ -41,6 +41,7 @@ docker/.env
 # Program input/output files
 config/config.yaml
 media/
+publish/
 tests/
 models/
 
