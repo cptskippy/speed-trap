@@ -50,6 +50,7 @@ services:
     volumes:
       - ../config/config.yaml:/app/config/config.yaml:ro
       - ../media:/app/media
+      - ../models:/app/models
     command: python -u task_object_classifier.py
 
   task-report-publisher:
