@@ -53,6 +53,20 @@ services:
       - ../models:/app/models
     command: python -u task_object_classifier.py
 
+  task-license_plate_reader:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - TZ=America/Los_Angeles
+    env_file:
+      - ../.env
+    volumes:
+      - ../config/config.yaml:/app/config/config.yaml:ro
+      - ../media:/app/media
+      - ../models:/app/models
+    command: python -u task_license_plate_reader.py
+
   task-report-publisher:
     build:
       context: ..

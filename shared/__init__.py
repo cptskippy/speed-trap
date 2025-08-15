@@ -13,4 +13,6 @@ from . import opencv_detection_helpers
 from . import opencv_contours_clustering
 from .opencv_classifier import Classifier, Detection
 from .video_processor import VideoProcessor
+from .summary_generator import SummaryGenerator
+from .openai_license_plate_reader import OpenAILicensePlateReader
 

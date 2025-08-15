@@ -39,7 +39,8 @@ task:
   sensor_log_handler:
     delta_offset: 10 # number of seconds before and after incident to save
     wait_period: 60 # number of seconds to wait before trying to retrieve data
-    file_name: "data.json"
+    data_file_name: "data.json"
+    summary_file_name: "summary.json"
     mqtt:
       client_id: "sensor_log_handler"
       topics:
@@ -62,40 +63,41 @@ task:
       - camera_name: "Global Shutter"
         file_name: "globalshutter.mpg"
         thumbnail_max_height: 150
-        minimum_contour_area: 22000 #50 # smallest size object to detect in a video
+        minimum_contour_area: 250000 #50 # smallest size object to detect in a video
         perform_lpr: true
         detection_thresholds: # two or more thresholds
           #- [[x1,y1],[x2,y2]]  # two points forming a line
-          - [[1, 800], [200, 1]]
-          - [[1350, 336], [394, 1085]]
+          - [[700, 0], [1369, 0]]
+          - [[1369, 1089], [700, 1089]]
         exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
-          - [[0, 643], [173, 573], [393, 976], [388, 1088], [0, 1088]]
+          - [[0, 528], [91, 545], [197, 428], [401, 506], [465, 796], [531, 830], [559, 962], [647, 980], [657, 1088], [0, 1088]]
       - camera_name: "Street"
         file_name: "street.mpg"
         thumbnail_max_height: 150
-        minimum_contour_area: 22000 #50 # smallest size object to detect in a video
+        minimum_contour_area: 20000 #50 # smallest size object to detect in a video
         perform_lpr: false
         detection_thresholds: # two or more thresholds
           #- [[x1,y1],[x2,y2]]  # two points forming a line
-          - [[199, 440], [622, 360]]
-          - [[1126, 412], [659, 652]]
+          - [[1168, 419], [868, 620]]
+          - [[643, 543], [1019, 387]]
         exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
           - [[0, 295], [173, 269], [482, 243], [752, 245], [1136, 244], [1664, 274], [1920, 293], [1920, 0], [0, 0]]
           - [[1920, 921], [846, 703], [76, 466], [0, 428], [0, 1080], [1920, 1080]]
-          - [[1169, 771], [1176, 603], [1119, 544], [1094, 481], [1103, 433], [1146, 422], [1122, 307], [1146, 205], [1182, 133], [1220, 68], [1232, 0], [1458, 0], [1640, 80], [1680, 276], [1688, 412], [1666, 511], [1634, 579], [1597, 632], [1425, 660], [1392, 674], [1377, 810]]
+          - [[1170, 780], [1173, 596], [1092, 531], [1093, 481], [1120, 444], [1118, 399], [1128, 365], [1114, 200], [1137, 134], [1254, 0], [1707, 0], [1739, 326], [1707, 370], [1703, 426], [1734, 493], [1703, 582], [1633, 612], [1536, 637], [1418, 657], [1394, 671], [1379, 804]]
+          - [[0, 526], [247, 415], [396, 499], [422, 808], [513, 819], [525, 936], [642, 975], [644, 1088], [0, 1088]]
       - camera_name: "Driveway"
         file_name: "driveway.mpg"
         thumbnail_max_height: 150
-        minimum_contour_area: 22000 #50 # smallest size object to detect in a video
+        minimum_contour_area: 38000 #50 # smallest size object to detect in a video
         perform_lpr: false
         detection_thresholds: # two or more thresholds
           #- [[x1,y1],[x2,y2]]  # two points forming a line
-          - [[212, 261], [442, 612]]
-          - [[712, 191], [1063, 368]]
+          - [[471, 245], [758, 542]]
+          - [[1063, 368], [712, 191]]
         exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
           - [[0, 712], [871, 514], [1501, 354], [1628, 310], [1692, 215], [1920, 250], [1920, 1080], [0, 1080]]
           - [[0, 160], [400, 112], [791, 73], [1029, 66], [1244, 71], [1475, 75], [1622, 98], [1791, 141], [1920, 171], [1920, 0], [0, 0]]
-          - [[1392, 386], [1380, 269], [1348, 261], [1328, 234], [1196, 198], [1140, 152], [1074, 70], [1055, 1], [1614, 4], [1675, 44], [1669, 110], [1646, 139], [1613, 203], [1584, 224], [1461, 249], [1447, 341], [1448, 394]]
+          - [[1392, 383], [1379, 278], [1317, 262], [1246, 242], [1219, 229], [1161, 195], [1096, 159], [1069, 69], [1051, 0], [1586, 0], [1638, 112], [1634, 180], [1615, 220], [1580, 255], [1475, 250], [1461, 249], [1448, 374]]
     open_cv_settings:
       deep_neural_network:
         model_path: "/models/MobileNetSSD_deploy.caffemodel" # your caffemodel
@@ -107,11 +109,22 @@ task:
       client_id: "object_classifier"
       topics:
         subscribe: "task/classifier"
+        publish: "task/lpr"
+        error: "task/error"
+
+  license_plate_reader:
+    openai_api_key_evar: "OPENAI_API_KEY"
+    openai_model: "o4-mini" # gpt-5, gpt-o4
+    openai_prompt: "Analyze the image and extract license plate information."
+    image_to_lpr: "globalshutter.png"
+    mqtt:
+      client_id: "license_plate_reader"
+      topics:
+        subscribe: "task/lpr"
         publish: "task/publisher"
         error: "task/error"
 
   report_publisher:
-    summary_file_name: "summary.json"
     publish_path: "./publish/"
     publish_url_template_evar: "PUBLISH_URL_TEMPLATE"
     html_file_name_evar: "PUBLISH_HTML_FILE_NAME"
