@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def get_crop_contour(frame, 
                      contour, 
-                     min_contour_area, 
+                     min_detection_area, 
                      padding = 20) -> tuple[Optional[np.ndarray], 
                                             Optional[tuple[int, int, int, int]]]:
     """
@@ -50,7 +50,7 @@ def get_crop_contour(frame,
     (x, y, w, h) = cv2.boundingRect(contour)
 
     # if the contour is too small, ignore it
-    if (w * h) < min_contour_area:
+    if (w * h) < min_detection_area:
         return None, (0,0,0,0)   
 
     if padding > 0:
@@ -72,7 +72,7 @@ def get_crop_contour(frame,
 
     logger.debug(f"Contour Bounding Box: {(x, y, w, h)}")
     logger.debug(f"  Box Area: {(w * h)}")
-    logger.debug(f"  Min Area: {min_contour_area}")
+    logger.debug(f"  Min Area: {min_detection_area}")
 
     return contour_crop, bounding_box
 

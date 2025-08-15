@@ -63,23 +63,19 @@ task:
       - camera_name: "Global Shutter"
         file_name: "globalshutter.mpg"
         thumbnail_max_height: 150
-        minimum_contour_area: 250000 #50 # smallest size object to detect in a video
+        minimum_detection_area: 250000 #50 # smallest size object to detect in a video
         perform_lpr: true
-        detection_thresholds: # two or more thresholds
-          #- [[x1,y1],[x2,y2]]  # two points forming a line
-          - [[700, 0], [1369, 0]]
-          - [[1369, 1089], [700, 1089]]
+        detection_polygon: # three or more points defining a detection area
+          - [[700, 0], [1369, 0], [1369, 1089], [700, 1089]]
         exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
           - [[0, 528], [91, 545], [197, 428], [401, 506], [465, 796], [531, 830], [559, 962], [647, 980], [657, 1088], [0, 1088]]
       - camera_name: "Street"
         file_name: "street.mpg"
         thumbnail_max_height: 150
-        minimum_contour_area: 20000 #50 # smallest size object to detect in a video
+        minimum_detection_area: 20000 #50 # smallest size object to detect in a video
         perform_lpr: false
-        detection_thresholds: # two or more thresholds
-          #- [[x1,y1],[x2,y2]]  # two points forming a line
-          - [[1168, 419], [868, 620]]
-          - [[643, 543], [1019, 387]]
+        detection_polygon: # three or more points defining a detection area
+          - [[1168, 419], [868, 620], [643, 543], [1019, 387]]
         exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
           - [[0, 295], [173, 269], [482, 243], [752, 245], [1136, 244], [1664, 274], [1920, 293], [1920, 0], [0, 0]]
           - [[1920, 921], [846, 703], [76, 466], [0, 428], [0, 1080], [1920, 1080]]
@@ -88,12 +84,10 @@ task:
       - camera_name: "Driveway"
         file_name: "driveway.mpg"
         thumbnail_max_height: 150
-        minimum_contour_area: 38000 #50 # smallest size object to detect in a video
+        minimum_detection_area: 38000 #50 # smallest size object to detect in a video
         perform_lpr: false
-        detection_thresholds: # two or more thresholds
-          #- [[x1,y1],[x2,y2]]  # two points forming a line
-          - [[471, 245], [758, 542]]
-          - [[1063, 368], [712, 191]]
+        detection_polygon: # three or more points defining a detection area
+          - [[471, 245], [758, 542], [1063, 368], [712, 191]]
         exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
           - [[0, 712], [871, 514], [1501, 354], [1628, 310], [1692, 215], [1920, 250], [1920, 1080], [0, 1080]]
           - [[0, 160], [400, 112], [791, 73], [1029, 66], [1244, 71], [1475, 75], [1622, 98], [1791, 141], [1920, 171], [1920, 0], [0, 0]]

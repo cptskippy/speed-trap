@@ -22,11 +22,11 @@ class Detection:
             of the bounding box, computed relative to the original image in XYWH format.
     """
     def __init__(self,
-                 class_id: int,
-                 class_name: str,
-                 class_color: tuple[int, int, int],
-                 confidence: float,
-                 shape: np.ndarray):
+                 shape: np.ndarray,
+                 class_id: int = -1,
+                 class_name: str = "Unknown",
+                 class_color: tuple[int, int, int] = (255,0,0),
+                 confidence: float = 0.0):
         """
         Initialize a Detection object.
 
@@ -38,12 +38,13 @@ class Detection:
             shape (np.ndarray): Normalized bounding box coordinates (x_min, y_min, x_max, y_max).
         """
 
+        self.shape = shape
         self.class_id = class_id
         self.class_name = class_name
         self.class_color = class_color
         self.confidence = confidence
-        self.shape = shape
-        self.bounding_box: Optional[tuple[int, int, int, int]] = None
+        self.bounding_box: tuple[int, int, int, int] = (0,0,0,0)
+        self.class_bounding_box: tuple[int, int, int, int] = (0,0,0,0)
 
     def __repr__(self):
 
@@ -114,6 +115,10 @@ class Classifier:
 
         # Load NN from model
         self._dnn=cv2.dnn.readNetFromCaffe(self._prototxt_path, self._model_path)
+
+        # Enable CUDA support
+        # self._dnn.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        # self._dnn.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
     def __repr__(self):
         
@@ -190,22 +195,19 @@ class Classifier:
         # Extract the Confidence
         class_id = int(dnn_result[1])
         confidence = dnn_result[2]
-
-        # Evaluate relevancy
-        if self._relevant_classes and class_id not in self._relevant_classes:
-            return None
-        
-        # Evaluate Confidence
-        if confidence < self._confidence_threshold:
-            return None
-
         # Extract the Class
         class_name = self._classes[class_id]
-
         # Associate Class to a Color
         class_color = self._colors[class_id]
 
-        return Detection(class_id, class_name, class_color, confidence, dnn_result[3:7])
+        # Evaluate relevancy
+        if self._relevant_classes and class_id not in self._relevant_classes:
+            class_id = -1
+            class_name = "Unknown"
+            class_color = (255,0,0)
+
+
+        return Detection(dnn_result[3:7], class_id, class_name, class_color, confidence)
 
     def classify_image(self, img: np.ndarray) -> list[Detection]:
         """
@@ -225,9 +227,11 @@ class Classifier:
         # Get the dimensions of the source image
         h, w = img.shape[:2]
 
-        detections = self._get_detections(img)
+        results = self._get_detections(img)
 
-        for d in detections:
+        detections = list[Detection]()
+
+        for d in results:
             # Extract the corners around the detection.
             # These are percentages of the height and width.
             # So we multiply by height and width
@@ -247,5 +251,11 @@ class Classifier:
 
             # Relative box in a format OpenCV expects
             d.bounding_box = x, y, w, h
+
+            # Skip if too small
+            if w < 1 or h < 1:
+                continue
+
+            detections.append(d)
 
         return detections
