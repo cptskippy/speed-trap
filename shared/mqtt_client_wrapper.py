@@ -4,8 +4,11 @@ mqtt_client_wrapper.py
 Implements wrapper around the Paho MQTT client to 
 simplify configuration and message handling.
 """
+import logging
 from urllib.parse import urlparse
 import paho.mqtt.client as mqtt
+
+logger = logging.getLogger(__name__)
 
 # This is the class responsible for pushing 
 # notifications.  It utilizes MQTT to push 
@@ -76,13 +79,13 @@ class MqttClientWrapper:
         try:
             payload = message.payload.decode('utf-8')
             print("\nMessage Received:")
-            print(f"  payload: {payload}")
+            logger.debug(f"  payload: {payload}")
 
         except Exception as e:
             print(f"Error processing message: {e}")
 
         if self.custom_on_message is not None:
-            print("Calling user defined on_message...")
+            print("  Calling user defined on_message...")
             self.custom_on_message(client, userdata, message)
 
     def on_disconnect(self, client, userdata, flags, reason_code, properties):
