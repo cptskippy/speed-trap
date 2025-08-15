@@ -34,7 +34,7 @@ def get_crop_contour(frame,
     Args:
         frame (np.ndarray): The input image from which to crop.
         contour (np.ndarray): A single contour (as returned by cv2.findContours).
-        min_contour_area (float): Minimum area threshold to consider the 
+        min_contour_area (float): Minimum bounding box area to consider the 
                                   contour valid.
         padding (int, optional): Amount of padding (in pixels) to add 
                                  around the bounding box. Default is 20.
@@ -46,15 +46,12 @@ def get_crop_contour(frame,
             - A tuple (x, y, w, h) representing the bounding box in the 
               original frame, or None if ignored.
     """
-
-    # if the contour is too small, ignore it
-    if cv2.contourArea(contour) < min_contour_area:
-        return None, None
-
     # Compute the bounding box for the contour
     (x, y, w, h) = cv2.boundingRect(contour)
 
-    logger.debug(f"Contour Bounding Box: {(x, y, w, h)}")
+    # if the contour is too small, ignore it
+    if (w * h) < min_contour_area:
+        return None, (0,0,0,0)   
 
     if padding > 0:
         # Get the dimensions of the frame
@@ -71,8 +68,13 @@ def get_crop_contour(frame,
 
     # Crop the countor area from the original frame
     contour_crop = frame[y:y+h, x:x+w]
+    bounding_box = (x, y, w, h)
 
-    return contour_crop, (x, y, w, h)
+    logger.debug(f"Contour Bounding Box: {(x, y, w, h)}")
+    logger.debug(f"  Box Area: {(w * h)}")
+    logger.debug(f"  Min Area: {min_contour_area}")
+
+    return contour_crop, bounding_box
 
 def oriented_ccw(a, b, c):
     """Determines if the orientation of 3 ordered points are counterclockwise"""
@@ -147,6 +149,10 @@ def threshold_crossed(zone, box):
 
     return False
 
+def point_in_polygon(point: tuple[int, int], polygon: np.ndarray):
+    result = cv2.pointPolygonTest(polygon, point, measureDist=False)
+
+    return result >= 0
 
 def draw_line(img: np.ndarray, line: tuple[int, int], 
               color: tuple[int, int, int] = (0,255,0)) -> np.ndarray:
@@ -209,8 +215,10 @@ def label_object(frame, class_name, class_color, confidence, box):
     cv2.putText(frame, class_label, (x+2, y2+2), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,0), 2)
     cv2.putText(frame, class_label, (x, y2), cv2.FONT_HERSHEY_COMPLEX, 1, class_color, 2)
 
-    #print(f'I am {int(confidence*100)}% confident I see a {class_name} at {(x, y, w, h)}')
-
+    # boxY = y + 15
+    # box_label = f"Box Area: {(w*h)}".capitalize()
+    # cv2.putText(frame, box_label, (x+2, boxY+2), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,0), 2)
+    # cv2.putText(frame, box_label, (x, boxY), cv2.FONT_HERSHEY_COMPLEX, 1, class_color, 2)
 
 def frame_to_byte_array(frame):
     """Converts a frame to a PNG encoded byte array"""
