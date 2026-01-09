@@ -5,10 +5,14 @@ Helper classes for extracting media from a UniFi Protect Server
 using uiprotect module.
 """
 import asyncio
+import logging
 from datetime import datetime
 from datetime import timedelta
+from pathlib import Path
 from urllib.parse import urlparse
 from uiprotect import ProtectApiClient
+
+logger = logging.getLogger(__name__)
 
 class Protect:
     """Helper class with functions around the uiprotect library"""
@@ -28,9 +32,11 @@ class Protect:
     async def get_client(self) -> ProtectApiClient:
         """Retrieves a Unifi Protect Client"""
         if self.client is None:
-            self.client = ProtectApiClient(self.host, self.port,
-                                           self.user_name, self.password,
-                                           False)
+            self.client = ProtectApiClient(host=self.host, 
+                                           port=self.port,
+                                           username=self.user_name, 
+                                           password=self.password,
+                                           verify_ssl=False)
 
             # this will initialize the protect .bootstrap and
             # open a Websocket connection for updates
@@ -65,6 +71,9 @@ class Protect:
 
     async def save_video(self, camera_id: str, dt: datetime, filename: str, offset: int):
         """Saves Clip from camera using delta offset around specified time."""
+        
+        logger.info("  Fetching client...")
+
         client = await self.get_client()
 
         delta = timedelta(seconds = offset)
@@ -72,10 +81,12 @@ class Protect:
         end = dt+delta
         fq_filename = filename + ".mpg"
 
+        logger.debug(f"Video File: {fq_filename}")
+
         await client.get_camera_video(camera_id, start, end,
                                       channel_index = 0,
                                       validate_channel_id = True,
-                                      output_file = fq_filename,
+                                      output_file = Path(fq_filename),
                                       chunk_size = 65536)
 
         await self.destroy_client()

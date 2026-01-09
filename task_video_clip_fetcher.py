@@ -6,6 +6,7 @@ from the NVR based on timestamps in published messages
 """
 import asyncio
 import json
+import time
 from datetime import datetime
 from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, load_config
 
@@ -93,6 +94,10 @@ def handle_event(data):
     # Convert timestamp to string
     timestamp = data.get("timestamp")
     occurred = datetime.fromisoformat(timestamp)
+
+    print(f"Waiting for {WAIT_PERIOD} seconds...")
+    time.sleep(WAIT_PERIOD)
+
 
     try:
         print("Saving media...")

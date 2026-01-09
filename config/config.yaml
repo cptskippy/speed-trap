@@ -50,7 +50,7 @@ task:
 
   video_clip_fetcher:
     delta_offset: 10 # number of seconds before and after incident to save
-    wait_period: 0 # number of seconds to wait before trying to retrieve data
+    wait_period: 60 # number of seconds to wait before trying to retrieve data
     mqtt:
       client_id: "video_clip_fetcher"
       topics:

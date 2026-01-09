@@ -19,6 +19,7 @@ mqtt_config = config["servers"]["mqtt"]
 ha_config = config["servers"]["homeassistant"]
 task_config = config["task"]["sensor_log_handler"]
 sensor_config = config["sensor"]
+media_config = config["media"]
 
 # Populate configuration variables
 MQTT_URI = mqtt_config["uri"]
@@ -31,6 +32,8 @@ MQTT_SUBSCRIBE_TOPIC = task_config["mqtt"]["topics"]["subscribe"]
 MQTT_PUBLISH_TOPIC = task_config["mqtt"]["topics"]["publish"]
 MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 
+FOLDER_FORMAT = media_config["output_folder_format"]
+
 HA_TOKEN = ha_config["token"]
 HA_REST_URL = ha_config["rest_uri"]
 HA_REST_QUERY_TEMPLATE = ha_config["query_template"]
@@ -41,8 +44,6 @@ HA_REST_CLIENT = HomeAssistantRest(
 
 HA_SENSOR = sensor_config["id"]
 
-SUMMARY_GENERATOR = SummaryGenerator()
-
 SPEED_THRESHOLD = sensor_config["trigger_threshold"]
 ERRONEOUS_DATA_THRESHOLD = sensor_config["error_threshold"]
 
@@ -51,6 +52,7 @@ WAIT_PERIOD = task_config["wait_period"]
 DATA_FILE_NAME = task_config["data_file_name"]
 SUMMARY_FILE_NAME = task_config["summary_file_name"]
 
+SUMMARY_GENERATOR = SummaryGenerator(FOLDER_FORMAT, SPEED_THRESHOLD)
 
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""

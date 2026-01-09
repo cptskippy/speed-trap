@@ -158,10 +158,10 @@ class VideoProcessor:
 
             # If the class was too small check the contour's bounding box
             if result is True:
-                # dh.label_object(frame, d.class_name, d.class_color, d.confidence, d.class_bounding_box)
+                dh.label_object(frame, d.class_name, d.class_color, d.confidence, d.class_bounding_box)
                 d.bounding_box = d.class_bounding_box
             else:
-                # dh.label_object(frame, d.class_name, d.class_color, d.confidence, d.bounding_box)
+                dh.label_object(frame, d.class_name, d.class_color, d.confidence, d.bounding_box)
                 point = self._get_point(d.bounding_box)
                 # Check if the point is in the polygon defined by the thresholds            
                 result = self._dh_point_in_polygon(point, polygon_np)
@@ -254,11 +254,11 @@ class VideoProcessor:
         if self._lower_corner_crossings(frame, detections, state, min_detection_area):
             return None
 
-        zoned = dh.draw_polygons(frame, zones)
-        frame = cv2.addWeighted(frame, .90, zoned, .10, 0.0)
-        frame = dh.draw_lines(frame, state.area)
-        cv2.imshow("Frame",imutils.resize(frame, width=960))
-        cv2.waitKey(1)
+        # zoned = dh.draw_polygons(frame, zones)
+        # frame = cv2.addWeighted(frame, .90, zoned, .10, 0.0)
+        # frame = dh.draw_lines(frame, state.area)
+        # cv2.imshow("Frame",imutils.resize(frame, width=960))
+        # cv2.waitKey(1)
 
         return keyFrame
 
