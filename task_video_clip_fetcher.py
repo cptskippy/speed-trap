@@ -54,6 +54,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
 def on_message(client, userdata, message):
     """"Processes the message from MQTT Broker"""
     try:
+        cameras = asyncio.run(NVR_CLIENT.get_cameras(CAMERA_NAMES))
+
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
         print("\nVideo Event Received:")
@@ -81,10 +83,17 @@ async def save_media(nvr_client, cams: list[dict[str, str]], dt, path: str):
         cam_id = camera["id"]
         print(f"  For camera: {cam_id}")
 
-        video_name = await nvr_client.save_video(cam_id, dt, filename, DELTA_OFFSET)
-        
-        output_files.append(video_name)
-        print(f"  Saved video: {video_name}\n")
+        try:
+
+
+            video_name = await nvr_client.save_video(cam_id, dt, filename, DELTA_OFFSET)
+            
+            output_files.append(video_name)
+            print(f"  Saved video: {video_name}\n")
+
+        except Exception as e:
+            print(f"Error Saving Cam: {cam_id}")
+            print(f"  Exception Details: {e}")
 
     return output_files
 
@@ -126,7 +135,7 @@ def handle_event(data):
 
 
 # Retrieve a list of cameras from the NVR
-cameras = asyncio.run(NVR_CLIENT.get_cameras(CAMERA_NAMES))
+cameras = []
 
 # Configure MQTT and wait...
 client = MqttClientWrapper(MQTT_URI, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD)
