@@ -20,6 +20,7 @@ config = load_config()
 mqtt_config = config["servers"]["mqtt"]
 protect_config = config["servers"]["unifi_protect"]
 task_config = config["task"]["video_clip_fetcher"]
+cameras_config = config["cameras"]
 
 # Populate configuration variables
 MQTT_URI = mqtt_config["uri"]
@@ -38,11 +39,10 @@ WAIT_PERIOD = task_config["wait_period"]
 UI_URI = protect_config["uri"]
 UI_USERNAME = protect_config["username"]
 UI_PASSWORD = protect_config["password"]
-CAMERA_NAMES = protect_config["camera_names"]
+CAMERA_NAMES = [cam["camera_id"] for cam in cameras_config]
 
 # Configure NVR client
 NVR_CLIENT = Protect(UI_URI, UI_USERNAME, UI_PASSWORD)
-
 
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""
@@ -54,10 +54,9 @@ def on_connect(client, userdata, flags, reason_code, properties):
 def on_message(client, userdata, message):
     """"Processes the message from MQTT Broker"""
     try:
-        cameras = asyncio.run(NVR_CLIENT.get_cameras(CAMERA_NAMES))
-
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
+
         print("\nVideo Event Received:")
         print(f"  Timestamp: {data.get('timestamp')}")
         print(f"  Sensor ID: {data.get('sensor_id')}")
@@ -109,7 +108,12 @@ def handle_event(data):
 
 
     try:
+        # Retrieve a list of cameras from the NVR
+        print("Retrieving cameras...")
+        cameras = asyncio.run(NVR_CLIENT.get_cameras(CAMERA_NAMES))
+
         print("Saving media...")
+
         folder = data.get("folder")
         videos = asyncio.run(save_media(NVR_CLIENT, cameras, occurred, folder))
 
@@ -134,8 +138,6 @@ def handle_event(data):
         print(f"  Error Message Published: {MQTT_ERROR_TOPIC}")
 
 
-# Retrieve a list of cameras from the NVR
-cameras = []
 
 # Configure MQTT and wait...
 client = MqttClientWrapper(MQTT_URI, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD)

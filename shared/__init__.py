@@ -5,6 +5,7 @@ A collection of Python modules for assisting in the automatic detection of and r
 
 """
 # shared/__init__.py
+from .license_plate_reader_helpers import LicensePlateRead, BoundingBox
 from .mqtt_client_wrapper import MqttClientWrapper
 from .config_loader import load_config
 from .home_assistant_api_helper import HomeAssistantRest, HomeAssistantWebSocket

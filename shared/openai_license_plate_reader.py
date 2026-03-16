@@ -1,29 +1,16 @@
+import asyncio
 import base64
 import logging
 import json
 import os
+from datetime import datetime
+from shared import LicensePlateRead
 from openai import OpenAI
-from pydantic import BaseModel
-from typing import Optional, Literal
 
 logger = logging.getLogger(__name__)
 # logger.debug("Debug message")
 # logger.info("Info message")
 # logger.warning("Warning message")
-
-class BoundingBox(BaseModel):
-    x: int
-    y: int
-    w: int
-    h: int
-
-class LicensePlateRead(BaseModel):
-    license_plate: Optional[str] = None
-    confidence: Optional[float] = None
-    bounding_box: Optional[BoundingBox] = None
-    diagnostic_messages: str
-    status: Literal["success", "no_plate_found", "error"]
-    error_message: Optional[str] = None
 
 
 class OpenAILicensePlateReader:
@@ -97,5 +84,13 @@ class OpenAILicensePlateReader:
                 )
 
                 result = response.output_parsed
+
+        return result
+    
+    async def get_license_plate_reads(self, source: str, dt: datetime, offset: int) -> list[LicensePlateRead]:
+        result = []
+
+        read = self.get_license_plate_read(source)
+        result.append(read)
 
         return result

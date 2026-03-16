@@ -4,11 +4,12 @@ task_license_plate_reader.py
 Subscribes to an MQTT topic and performs LPR activities
 against specified images.
 """
+import asyncio
 import json
 from datetime import datetime
 import logging
 import shutil
-from shared import MqttClientWrapper, load_config, OpenAILicensePlateReader
+from shared import load_config, MqttClientWrapper, OpenAILicensePlateReader, Protect
 
 
 # logging.basicConfig(
@@ -25,7 +26,11 @@ logger = logging.getLogger(__name__)
 # Load configuration from yaml
 config = load_config()
 mqtt_config = config["servers"]["mqtt"]
+protect_config = config["servers"]["unifi_protect"]
 task_config = config["task"]["license_plate_reader"]
+cameras_config = config["cameras"]
+video_extension = config["media"]["video_extension"]
+image_extension = config["media"]["image_extension"]
 
 # Populate configuration variables
 MQTT_URI = mqtt_config["uri"]
@@ -41,10 +46,22 @@ MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 AI_API_KEY = task_config["openai_api_key"]
 AI_MODEL = task_config["openai_model"]
 AI_PROMPT = task_config["openai_prompt"]
-IMAGE_TO_LPR = task_config["image_to_lpr"]
+DELTA_OFFSET = task_config["delta_offset"]
+LPR_METHOD = task_config["lpr_method"]
+
+UI_URI = protect_config["uri"]
+UI_USERNAME = protect_config["username"]
+UI_PASSWORD = protect_config["password"]
+LPR_CAMERAS = [cam for cam in cameras_config if cam["perform_lpr"] == True]
+
+# Configure NVR client
+NVR_CLIENT = Protect(UI_URI, UI_USERNAME, UI_PASSWORD)
 
 # Configure LPR client
-LPR_CLIENT = OpenAILicensePlateReader(AI_API_KEY, AI_MODEL, AI_PROMPT)
+if LPR_METHOD == "OPENAI":
+    LPR_CLIENT = OpenAILicensePlateReader(AI_API_KEY, AI_MODEL, AI_PROMPT)
+else:
+    LPR_CLIENT = NVR_CLIENT
 
 
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -95,6 +112,9 @@ def update_summary(summary_path, license_plate):
 
 def handle_event(data):
     """Performs a license plate read."""
+    status = "failure"
+    error = "No result"
+    plate = ""
 
     # {
     #   "timestamp": "2025-08-15T19:54:57.406713+00:00", 
@@ -120,16 +140,40 @@ def handle_event(data):
     #     "./media/20250815125457/globalshutter_thumb.png"
     #   ]
     # }
-    
-    # Generate Thumbnail Path
-    folder = data.get("folder")
-    image_path = folder + "/" + IMAGE_TO_LPR
 
-    # Perform LPR
-    result = LPR_CLIENT.get_license_plate_read(image_path)
-    status = result.status
-    error = result.error_message
-    plate = result.license_plate
+    for camera in LPR_CAMERAS:
+
+        source = ""
+    
+        if LPR_METHOD == "OPENAI":
+            # Generate Path
+            file_name = camera["file_name"]
+            folder = data.get("folder")
+            source = folder + "/" + file_name + image_extension
+
+        if LPR_METHOD == "PROTECT":
+            camera_name = camera["camera_id"]
+            cameras = asyncio.run(NVR_CLIENT.get_cameras([camera_name]))
+            if len(cameras) > 0:
+                source = cameras[0]["id"]
+                
+        print(f"Source: {source}")
+
+
+        timestamp = data.get("timestamp")
+        occurred = datetime.fromisoformat(timestamp)
+    
+        # Perform LPR
+        results = asyncio.run(LPR_CLIENT.get_license_plate_reads(source=source,
+                                                                 dt=occurred,
+                                                                 offset=DELTA_OFFSET))
+
+        if len(results) > 0:
+            result = results[0]
+
+            status = result.status
+            error = result.error_message
+            plate = result.license_plate
 
     if status == "success":
       # Update Summary file

@@ -36,7 +36,9 @@ config = load_config()
 mqtt_config = config["servers"]["mqtt"]
 task_config = config["task"]["object_classifier"]
 
-video_clip_details = task_config["video_clip_details"]
+camera_details = config["cameras"]
+video_extension = config["media"]["video_extension"]
+image_extension = config["media"]["image_extension"]
 open_cv_settings = task_config["open_cv_settings"]
 dnn = open_cv_settings["deep_neural_network"]
 
@@ -109,11 +111,11 @@ def handle_event(data):
     try:
         print("Fetching media...")
         videos = data.get("videos")
-
+        
         # VideoProcessor
         vp = VideoProcessor(PROTOTXT, MODEL, CLASSES, CLASSES_TO_TRACK, CONFIDENCE_THRESHOLD)
 
-        images, thumbs = vp.process_videos(videos, video_clip_details)
+        images, thumbs = vp.process_videos(videos, camera_details, video_extension, image_extension)
 
         print(f"  Images: {images}")
         print(f"  Thumbs: {thumbs}")

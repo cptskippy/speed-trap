@@ -16,16 +16,54 @@ servers:
     uri_evar: "NVR_URI"
     username_evar: "NVR_USERNAME"
     password_evar: "NVR_PASSWORD"
-    camera_names_evar: "NVR_CAMERA_NAMES"
 
 media:
   output_path: "./media/" # internal path used to prepare assets
   output_folder_format: "%Y%m%d%H%M%S"
+  video_extension: ".mpg"
+  image_extension: ".png"
 
 sensor:
   id_evar: "SENSOR_ID"
   trigger_threshold: 25
   error_threshold: 10.0
+
+cameras:
+  - camera_name_evar: "CAMERAS_CAMERA1_NAME"
+    camera_id_evar: "CAMERAS_CAMERA1_ID"
+    file_name_evar: "CAMERAS_CAMERA1_FILENAME"
+    thumbnail_max_height: 150
+    minimum_detection_area: 250000 #50 # smallest size object to detect in a video
+    perform_lpr: true
+    detection_polygon: # three or more points defining a detection area
+      - [[700, 0], [1369, 0], [1369, 1089], [700, 1089]]
+    exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
+      - [[0, 528], [91, 545], [197, 428], [401, 506], [465, 796], [531, 830], [559, 962], [647, 980], [657, 1088], [0, 1088]]
+  - camera_name_evar: "CAMERAS_CAMERA2_NAME"
+    camera_id_evar: "CAMERAS_CAMERA2_ID"
+    file_name_evar: "CAMERAS_CAMERA2_FILENAME"
+    thumbnail_max_height: 150
+    minimum_detection_area: 20000 #50 # smallest size object to detect in a video
+    perform_lpr: false
+    detection_polygon: # three or more points defining a detection area
+      - [[1168, 419], [868, 620], [643, 543], [1019, 387]]
+    exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
+      - [[0, 295], [173, 269], [482, 243], [752, 245], [1136, 244], [1664, 274], [1920, 293], [1920, 0], [0, 0]]
+      - [[1920, 921], [846, 703], [76, 466], [0, 428], [0, 1080], [1920, 1080]]
+      - [[1170, 780], [1173, 596], [1092, 531], [1093, 481], [1120, 444], [1118, 399], [1128, 365], [1114, 200], [1137, 134], [1254, 0], [1707, 0], [1739, 326], [1707, 370], [1703, 426], [1734, 493], [1703, 582], [1633, 612], [1536, 637], [1418, 657], [1394, 671], [1379, 804]]
+      - [[0, 526], [247, 415], [396, 499], [422, 808], [513, 819], [525, 936], [642, 975], [644, 1088], [0, 1088]]
+  - camera_name_evar: "CAMERAS_CAMERA3_NAME"
+    camera_id_evar: "CAMERAS_CAMERA3_ID"
+    file_name_evar: "CAMERAS_CAMERA3_FILENAME"
+    thumbnail_max_height: 150
+    minimum_detection_area: 38000 #50 # smallest size object to detect in a video
+    perform_lpr: false
+    detection_polygon: # three or more points defining a detection area
+      - [[471, 245], [758, 542], [1063, 368], [712, 191]]
+    exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
+      - [[0, 712], [871, 514], [1501, 354], [1628, 310], [1692, 215], [1920, 250], [1920, 1080], [0, 1080]]
+      - [[0, 160], [400, 112], [791, 73], [1029, 66], [1244, 71], [1475, 75], [1622, 98], [1791, 141], [1920, 171], [1920, 0], [0, 0]]
+      - [[1392, 383], [1379, 278], [1317, 262], [1246, 242], [1219, 229], [1161, 195], [1096, 159], [1069, 69], [1051, 0], [1586, 0], [1638, 112], [1634, 180], [1615, 220], [1580, 255], [1475, 250], [1461, 249], [1448, 374]]
 
 task:
   folder_setup:
@@ -59,39 +97,6 @@ task:
         error: "task/error"
 
   object_classifier:
-    video_clip_details:
-      - camera_name: "Global Shutter"
-        file_name: "globalshutter.mpg"
-        thumbnail_max_height: 150
-        minimum_detection_area: 250000 #50 # smallest size object to detect in a video
-        perform_lpr: true
-        detection_polygon: # three or more points defining a detection area
-          - [[700, 0], [1369, 0], [1369, 1089], [700, 1089]]
-        exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
-          - [[0, 528], [91, 545], [197, 428], [401, 506], [465, 796], [531, 830], [559, 962], [647, 980], [657, 1088], [0, 1088]]
-      - camera_name: "Street"
-        file_name: "street.mpg"
-        thumbnail_max_height: 150
-        minimum_detection_area: 20000 #50 # smallest size object to detect in a video
-        perform_lpr: false
-        detection_polygon: # three or more points defining a detection area
-          - [[1168, 419], [868, 620], [643, 543], [1019, 387]]
-        exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
-          - [[0, 295], [173, 269], [482, 243], [752, 245], [1136, 244], [1664, 274], [1920, 293], [1920, 0], [0, 0]]
-          - [[1920, 921], [846, 703], [76, 466], [0, 428], [0, 1080], [1920, 1080]]
-          - [[1170, 780], [1173, 596], [1092, 531], [1093, 481], [1120, 444], [1118, 399], [1128, 365], [1114, 200], [1137, 134], [1254, 0], [1707, 0], [1739, 326], [1707, 370], [1703, 426], [1734, 493], [1703, 582], [1633, 612], [1536, 637], [1418, 657], [1394, 671], [1379, 804]]
-          - [[0, 526], [247, 415], [396, 499], [422, 808], [513, 819], [525, 936], [642, 975], [644, 1088], [0, 1088]]
-      - camera_name: "Driveway"
-        file_name: "driveway.mpg"
-        thumbnail_max_height: 150
-        minimum_detection_area: 38000 #50 # smallest size object to detect in a video
-        perform_lpr: false
-        detection_polygon: # three or more points defining a detection area
-          - [[471, 245], [758, 542], [1063, 368], [712, 191]]
-        exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
-          - [[0, 712], [871, 514], [1501, 354], [1628, 310], [1692, 215], [1920, 250], [1920, 1080], [0, 1080]]
-          - [[0, 160], [400, 112], [791, 73], [1029, 66], [1244, 71], [1475, 75], [1622, 98], [1791, 141], [1920, 171], [1920, 0], [0, 0]]
-          - [[1392, 383], [1379, 278], [1317, 262], [1246, 242], [1219, 229], [1161, 195], [1096, 159], [1069, 69], [1051, 0], [1586, 0], [1638, 112], [1634, 180], [1615, 220], [1580, 255], [1475, 250], [1461, 249], [1448, 374]]
     open_cv_settings:
       deep_neural_network:
         model_path: "/models/MobileNetSSD_deploy.caffemodel" # your caffemodel
@@ -107,10 +112,12 @@ task:
         error: "task/error"
 
   license_plate_reader:
+    lpr_method: "PROTECT"
     openai_api_key_evar: "OPENAI_API_KEY"
     openai_model: "o4-mini" # gpt-5, gpt-o4
-    openai_prompt: "Analyze the image and extract license plate information."
-    image_to_lpr: "globalshutter.png"
+    openai_prompt: "Analyze the image and extract license plate information, vehicle type, and color."
+    delta_offset: 10 # number of seconds before and after incident to save
+
     mqtt:
       client_id: "license_plate_reader"
       topics:

@@ -11,6 +11,8 @@ from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 from uiprotect import ProtectApiClient
+from uiprotect.data import Camera, SmartDetectObjectType
+from shared import LicensePlateRead, BoundingBox
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +75,6 @@ class Protect:
         """Saves Clip from camera using delta offset around specified time."""
         
         logger.info("  Fetching client...")
-
         client = await self.get_client()
 
         delta = timedelta(seconds = offset)
@@ -93,7 +94,7 @@ class Protect:
 
         return fq_filename
 
-    async def get_cameras(self, camera_filter: list[str]=None):
+    async def get_cameras(self, camera_filter: list[str]=[]):
         """Connects to UniFi Protect and enumerates cameras"""
         client = await self.get_client()
 
@@ -102,7 +103,7 @@ class Protect:
             {
                 "name": camera.name,
                 "id": camera.id,
-                "filename": f"{camera.name.lower().replace(" ", "")}"
+                "filename": f"{self.get_camera_filename(camera)}"
             }
             for camera in client.bootstrap.cameras.values()
         ]
@@ -114,7 +115,75 @@ class Protect:
 
         return [camera for camera in cameras if camera['name'] in camera_filter]
 
+    async def get_license_plate_reads(self, source: str, dt: datetime, offset: int) -> list[LicensePlateRead]:
+        """Returns LPR reads using delta offset around specified time."""
+        plates = []
 
+        logger.info("  Fetching client...")
+        client = await self.get_client()
+
+        delta = timedelta(seconds = offset)
+        start = dt-delta
+        end = dt+delta
+
+        events = await client.get_events(start=start, 
+                                         end=end, 
+                                         smart_detect_types=[SmartDetectObjectType.LICENSE_PLATE])
+
+        for event in events:
+            if source == event.camera_id:
+                thumb = event.get_detected_thumbnail()
+
+                if thumb != None:
+                    if 'vehicle' in (thumb.type or []):
+                        try:
+                            plate = thumb.name
+                        except AttributeError:
+                            plate = None
+                            
+                        try:
+                            type = thumb.attributes.vehicleType.val
+                        except AttributeError:
+                            type = None
+                            
+                        try:
+                            color = thumb.attributes.color.val
+                        except AttributeError:
+                            color = None
+
+                        try:
+                            confidence = thumb.confidence
+                        except AttributeError:
+                            confidence = None
+
+                        try:
+                            coord = thumb.coord
+                            bbox = BoundingBox(x=coord[0], y=coord[1], w=coord[2], h=coord[3])
+                        except AttributeError:
+                            bbox = None
+
+                        #thumb.
+
+                        lpr = LicensePlateRead(license_plate=plate, 
+                                               vehicle_type=type, 
+                                               vehicle_color=color, 
+                                               confidence=confidence,
+                                               bounding_box=bbox,
+                                               status="success", 
+                                               diagnostic_messages="")
+                        plates.append(lpr)    
+                        
+                        #plates.append({
+                        #    "plate": plate,
+                        #    "type": type,
+                        #    "color": color,
+                        #    #"thumbnail": event.get_thumbnail(width=480, height=480)
+                        #})
+
+        return plates
+    
+    def get_camera_filename(self, camera: Camera):
+        return camera.name.lower().replace(" ", "")
 
 class ProtectMediaNotAvailable(Exception):
     """Exception raised when request media isn't available from UI Protect"""

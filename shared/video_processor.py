@@ -327,7 +327,7 @@ class VideoProcessor:
         logger.info(f"    Frames processed: {frame_cnt}")
         return None
 
-    def process_videos(self, videos, video_clip_details):
+    def process_videos(self, videos, video_clip_details, video_extension: str, image_extension: str):
         images = []
         thumbs = []
 
@@ -345,17 +345,18 @@ class VideoProcessor:
             logger.info(f"Processing video {count} of {total}")
             logger.info(f"Video file path: {video_file_path}")
 
-            video_filename = os.path.basename(video_file_path)
+            video_filename = os.path.basename(video_file_path).replace(video_extension,"")
+
+
 
             if video_filename in video_details_map:
                 details = video_details_map[video_filename]
-
+                
                 camera_name = details["camera_name"]
-                image_name = video_file_path.replace(".mpg","") + ".png"
+                image_name = video_file_path.replace(video_extension, image_extension)
                 video_name = video_file_path
                 thumb_size = int(details["thumbnail_max_height"])
-                thumb_name = video_file_path.replace(".mpg","") + "_thumb.png"
-                lpr = details["perform_lpr"]
+                thumb_name = video_file_path.replace(video_extension, "_thumb" + image_extension)
                 min_detection_area = details["minimum_detection_area"]
                 detection_area = details["detection_polygon"]
                 ex_zones = details["exclusion_zones"]
