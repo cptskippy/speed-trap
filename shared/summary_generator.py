@@ -39,11 +39,15 @@ class SummaryGenerator:
     def generate_summary_file(self, data_file: str, summary_file: str):
         top_speed, occurred, approaching = self._parse_data_file(data_file)
         license_plate = "" # placeholder for later...
+        vehicle_color = "" # placeholder for later...
+        vehicle_type = "" # placeholder for later...
 
         summary_data = {"top_speed": top_speed,
                         "occurred": occurred,
                         "approaching": approaching,
-                        "license_plate": license_plate}
+                        "license_plate": license_plate,
+                        "vehicle_color": vehicle_color,
+                        "vehicle_type": vehicle_type}
         
         logger.info(f"  Summary Data: {summary_data}")
         self._save_summary_file(summary_file, summary_data)

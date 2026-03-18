@@ -92,7 +92,7 @@ def on_message(client, userdata, message):
         print(f"Error processing message: {e}")
 
 
-def update_summary(summary_path, license_plate):
+def update_summary(summary_path, license_plate, vehicle_color, vehicle_type):
     """Opens the summary file and updates the license_plate"""        
 
     logger.debug(f"  Opening summary data: {summary_path}")
@@ -102,6 +102,8 @@ def update_summary(summary_path, license_plate):
 
     logger.debug(f"  Updating summary data...")
     summary_data["license_plate"] = license_plate
+    summary_data["vehicle_color"] = vehicle_color
+    summary_data["vehicle_type"] = vehicle_type
 
     logger.debug(f"  Saving summary data...")
 
@@ -174,12 +176,14 @@ def handle_event(data):
             status = result.status
             error = result.error_message
             plate = result.license_plate
+            vehicle_color = result.vehicle_color
+            vehicle_type = result.vehicle_type
 
     if status == "success":
       # Update Summary file
       summary_path = data.get("summary_file")
 
-      update_summary(summary_path, plate)
+      update_summary(summary_path, plate, vehicle_color, vehicle_type)
       print(f"  License plate read: {plate}")
     else:
       print(f"  No plate data: {error}")
