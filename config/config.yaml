@@ -104,6 +104,7 @@ task:
         classes_path: "/models/MobileNetSSD_deploy.synset" # your synset file
         classes_to_track: [2,6,7,14] # classes from your synset file to track
         confidence_threshold: 0.9
+      learning_rate: 0.4
     mqtt:
       client_id: "object_classifier"
       topics:

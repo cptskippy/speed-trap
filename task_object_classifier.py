@@ -47,6 +47,7 @@ MODEL = os.getcwd() + dnn["model_path"]
 CLASSES = os.getcwd() + dnn["classes_path"]
 CLASSES_TO_TRACK = dnn["classes_to_track"] #Bicycle,Bus,Car,Motorbike
 CONFIDENCE_THRESHOLD = dnn["confidence_threshold"]
+LEARNING_RATE = open_cv_settings["learning_rate"]
 
 
 # Populate configuration variables
@@ -113,7 +114,7 @@ def handle_event(data):
         videos = data.get("videos")
         
         # VideoProcessor
-        vp = VideoProcessor(PROTOTXT, MODEL, CLASSES, CLASSES_TO_TRACK, CONFIDENCE_THRESHOLD)
+        vp = VideoProcessor(PROTOTXT, MODEL, CLASSES, CLASSES_TO_TRACK, CONFIDENCE_THRESHOLD, LEARNING_RATE)
 
         images, thumbs = vp.process_videos(videos, camera_details, video_extension, image_extension)
 
