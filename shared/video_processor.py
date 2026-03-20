@@ -334,7 +334,7 @@ class VideoProcessor:
         #     cv2.waitKey()
         # cv2.destroyAllWindows()
 
-        return None
+        return lastFrame
 
     def process_videos(self, videos, video_clip_details, video_extension: str, image_extension: str):
         images = []
