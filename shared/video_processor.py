@@ -33,7 +33,8 @@ class VideoProcessor:
                        model_weights_path: str,
                        model_classes_path: str,
                        relevant_classes: list[int] = [],
-                       confidence_threshold: float = 0.7):
+                       confidence_threshold: float = 0.7,
+                       learning_rate: float = 0.05):
         """
         Initialize a VideoProcessor object.
 
@@ -43,6 +44,7 @@ class VideoProcessor:
             model_classes_path (str): Path to a file containing class labels, one per line.
             relevant_classes (list[int]): Optional list of class IDs to retain in detection results.
             confidence_threshold (float): Minimum confidence required to accept a detection.
+            detection_sensitivity (float): 
         """
 
         self._prototxt_path = model_prototxt_path
@@ -50,6 +52,7 @@ class VideoProcessor:
         self._classes_path = model_classes_path
         self._relevant_classes = relevant_classes
         self._confidence_threshold = confidence_threshold
+        self._learning_rate = learning_rate
         
         cl = Classifier(model_prototxt_path, 
                         model_weights_path, 
@@ -106,8 +109,7 @@ class VideoProcessor:
         frame_delta = cv2.absdiff(keyFrame, preprocessed)
 
         # Blend the frame onto our keyFrame
-        newkey = cv2.addWeighted(keyFrame, .95, preprocessed, .05, 0.0)
-        #newkey = cv2.addWeighted(keyFrame, .80, preprocessed, .20, 0.0)
+        newkey = cv2.addWeighted(keyFrame, 1.0 - self._learning_rate, preprocessed, self._learning_rate, 0.0)
 
         # Compute threshold
         thresh = self._cc_calculate_threshold(frame_delta)
@@ -120,6 +122,10 @@ class VideoProcessor:
             cnts = self._cc_agglomerative_cluster(cnts)
         else:
             cnts = []
+
+        # cv2.imshow("Frame Delta",imutils.resize(frame_delta, width=480))
+        # cv2.imshow("New Key",imutils.resize(newkey, width=480))
+        # cv2.imshow("Threshold",imutils.resize(thresh, width=480))
 
         return cnts, newkey
 
@@ -239,29 +245,36 @@ class VideoProcessor:
 
         return detections
                 
-    def _check_frame(self, frame, keyFrame, state: AreaState, min_detection_area, zones):
+    def _check_frame(self, frame, keyFrame, state: AreaState, min_detection_area, ex_zones):
+        crossed = False
+
         # Find differences between images as contours
-        contours, keyFrame = self._detect_motion(frame, keyFrame, zones)
+        contours, keyFrame = self._detect_motion(frame, keyFrame, ex_zones)
 
         # Filter contours to detections
         detections = self._contours_to_detections(frame, contours, min_detection_area)
 
         # Check for crossing of two thresholds
         #if self._threshold_crossings(frame, detections, state):
-        #    return None
+        #    crossed = True
 
         # Check for point inside polygon
         if self._lower_corner_crossings(frame, detections, state, min_detection_area):
-            return None
+            crossed = True
 
-        # zoned = dh.draw_polygons(frame, zones)
-        # frame = cv2.addWeighted(frame, .90, zoned, .10, 0.0)
-        # frame = dh.draw_lines(frame, state.area)
+        # Draw some graphics on the frame
+        ex_zoned = dh.draw_polygons(frame, ex_zones)
+        frame = cv2.addWeighted(frame, .90, ex_zoned, .10, 0.0)
+        area = dh.draw_polygons(frame, state.area)
+        frame = cv2.addWeighted(frame, .90, area, .10, 0.0)
+
         # cv2.imshow("Frame",imutils.resize(frame, width=960))
-        # cv2.waitKey(1)
+        # cv2.waitKey()
 
+        if crossed == True:
+            return None
+        
         return keyFrame
-
 
     def process_video(self, image_name, video_name, min_detection_area, detection_area, ex_zones):
         vs = cv2.VideoCapture()
@@ -283,13 +296,8 @@ class VideoProcessor:
             # we have reached the end of the video
             if frame is None:
                 if lastFrame is not None:
-                    #cv2.imwrite(image_name, lastFrame)
                     logger.info("  No more frames")
-                    cv2.destroyAllWindows()
-                    vs.release()
-                    logger.info("  Stream closed")
-                    logger.info(f"    Frames processed: {frame_cnt}")
-                    return lastFrame
+                    break
             
             frame_cnt += 1
             logger.debug(f"Frame {frame_cnt}")
@@ -297,34 +305,35 @@ class VideoProcessor:
             # Get the dimensions of the frame
             # image_height, image_width = frame.shape[:2]
 
+            # Check for a threshold crossing and return None if true
             keyFrame = self._check_frame(frame, keyFrame, state, min_detection_area, ex_zones)
 
             if keyFrame is None:
                 if state.area_entered_frame is not None:
-                    #cv2.imwrite(image_name, state.first_crossed_frame)
                     logger.info("  Area entered")
-                    cv2.destroyAllWindows()
-                    vs.release()
-                    logger.info("  Stream closed")
-                    logger.info(f"    Frames processed: {frame_cnt}")
-                    return state.area_entered_frame
+                    lastFrame = state.area_entered_frame
+                    break
                 else:
-                    # cv2.imwrite(image_name, frame)
                     logger.info("  No keyframe")
-                    cv2.destroyAllWindows()
-                    vs.release()
-                    logger.info("  Stream closed")
-                    logger.info(f"    Frames processed: {frame_cnt}")
-                    return frame
+                    lastFrame = frame
+                    break
 
             # Blank out the frame so that if capture fails the script ends
             lastFrame = frame
             frame = None
 
-        cv2.destroyAllWindows()
+        else:
+            lastFrame = None
+
         vs.release()
         logger.info("  Stream closed")
         logger.info(f"    Frames processed: {frame_cnt}")
+
+        # if lastFrame is not None:
+        #     cv2.imshow("Final Frame",imutils.resize(lastFrame, width=960))
+        #     cv2.waitKey()
+        # cv2.destroyAllWindows()
+
         return None
 
     def process_videos(self, videos, video_clip_details, video_extension: str, image_extension: str):

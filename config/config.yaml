@@ -38,7 +38,7 @@ cameras:
     detection_polygon: # three or more points defining a detection area
       - [[700, 0], [1369, 0], [1369, 1089], [700, 1089]]
     exclusion_zones: # each zone three or more points forming a polygon [[x1,y1],[x2,y2],[x3,y3]]
-      - [[0, 528], [91, 545], [197, 428], [401, 506], [465, 796], [531, 830], [559, 962], [647, 980], [657, 1088], [0, 1088]]
+      - [[0, 205], [112, 196], [170, 360], [201, 519], [204, 694], [255, 804], [367, 867], [427, 1088], [0, 1088]]
   - camera_name_evar: "CAMERAS_CAMERA2_NAME"
     camera_id_evar: "CAMERAS_CAMERA2_ID"
     file_name_evar: "CAMERAS_CAMERA2_FILENAME"
