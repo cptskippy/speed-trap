@@ -6,9 +6,8 @@ from the NVR based on timestamps in published messages
 """
 import asyncio
 import json
-import time
 from datetime import datetime
-from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, load_config
+from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, retry_with_backoff, load_config
 
 
 VERBOSE = False
@@ -103,19 +102,25 @@ def handle_event(data):
     timestamp = data.get("timestamp")
     occurred = datetime.fromisoformat(timestamp)
 
-    print(f"Waiting for {WAIT_PERIOD} seconds...")
-    time.sleep(WAIT_PERIOD)
+    max_videos = None
 
+    def fetch_videos():
+        nonlocal max_videos
+        nonlocal occurred
+        nonlocal data
+        cameras = asyncio.run(NVR_CLIENT.get_cameras(CAMERA_NAMES))
+        print("Saving media...")
+        folder = data.get("folder")
+        videos = asyncio.run(save_media(NVR_CLIENT, cameras, occurred, folder))
+        if not videos:
+            raise ProtectMediaNotAvailable("All cameras returned no video clips", 500)
+        max_videos = videos
+        return videos
 
     try:
         # Retrieve a list of cameras from the NVR
         print("Retrieving cameras...")
-        cameras = asyncio.run(NVR_CLIENT.get_cameras(CAMERA_NAMES))
-
-        print("Saving media...")
-
-        folder = data.get("folder")
-        videos = asyncio.run(save_media(NVR_CLIENT, cameras, occurred, folder))
+        videos = retry_with_backoff(fetch_videos)
 
         # Update Payload
         data["videos"] = videos

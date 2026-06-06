@@ -16,4 +16,5 @@ from .opencv_classifier import Classifier, Detection
 from .video_processor import VideoProcessor
 from .summary_generator import SummaryGenerator
 from .openai_license_plate_reader import OpenAILicensePlateReader
+from .retry_helper import retry_with_backoff
 
