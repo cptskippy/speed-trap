@@ -4,12 +4,11 @@ task_sensor_log_handler.py
 Subscribes to an MQTT topic and exports sensor 
 logs based on timestamp in published messages
 """
-import time
 import urllib.parse
 import json
 from datetime import datetime, timedelta
 import logging
-from shared import MqttClientWrapper, HomeAssistantRest, SummaryGenerator, load_config
+from shared import MqttClientWrapper, HomeAssistantRest, SummaryGenerator, retry_with_backoff, load_config
 
 logger = logging.getLogger(__name__)
 
@@ -151,14 +150,19 @@ def handle_event(data):
     occurred = datetime.fromisoformat(timestamp)
     #local = occurred.astimezone()
 
-    print(f"Waiting for {WAIT_PERIOD} seconds...")
-    time.sleep(WAIT_PERIOD)
-    print("  Resuming")
-
     print("Saving data:")
 
-    # Pull data from Home Assistant
-    sensor_data = get_sensor_data(occurred)
+    # Pull data from Home Assistant with retry
+    try:
+        sensor_data = retry_with_backoff(
+            get_sensor_data,
+            occurred,
+            on_empty=lambda r: not r.get("approaching") and not r.get("retreating"),
+        )
+    except Exception as e:
+        print(f"  Failed to retrieve sensor data: {e}")
+        sensor_data = {"approaching": [], "retreating": []}
+
     logger.debug(f"  Sensor data: {sensor_data}")
 
     # Save data to disk
