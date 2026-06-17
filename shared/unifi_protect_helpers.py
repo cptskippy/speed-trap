@@ -6,6 +6,7 @@ using uiprotect module.
 """
 import asyncio
 import logging
+import time
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
@@ -18,6 +19,11 @@ logger = logging.getLogger(__name__)
 
 class Protect:
     """Helper class with functions around the uiprotect library"""
+
+    # Seconds of idle time before considering the session stale.
+    # Protect sessions are short-lived; refresh proactively to avoid 401s.
+    SESSION_STALE_SECONDS = 300  # 5 minutes
+
     def __init__(self, nvr_uri: str, user_name: str, password: str):
         uri = urlparse(nvr_uri)
 
@@ -27,16 +33,24 @@ class Protect:
         self.user_name = user_name
         self.password = password
         self.client = None
+        self._last_activity = 0.0
 
     def __del__(self):
         asyncio.run(self.destroy_client())
 
     async def get_client(self) -> ProtectApiClient:
-        """Retrieves a Unifi Protect Client"""
+        """Retrieves a Unifi Protect Client, refreshing if session is stale."""
+        now = time.monotonic()
+
+        # If client exists but has been idle too long, destroy and recreate.
+        if self.client is not None and (now - self._last_activity) > self.SESSION_STALE_SECONDS:
+            logger.info("Protect session stale (%.0fs idle), refreshing...", now - self._last_activity)
+            await self.destroy_client()
+
         if self.client is None:
-            self.client = ProtectApiClient(host=self.host, 
+            self.client = ProtectApiClient(host=self.host,
                                            port=self.port,
-                                           username=self.user_name, 
+                                           username=self.user_name,
                                            password=self.password,
                                            verify_ssl=False)
 
@@ -44,6 +58,7 @@ class Protect:
             # open a Websocket connection for updates
             await self.client.update()
 
+        self._last_activity = time.monotonic()
         return self.client
 
     async def destroy_client(self):
@@ -60,8 +75,6 @@ class Protect:
         client = await self.get_client()
         pic = await client.get_camera_snapshot(camera_id, dt=dt)
 
-        await self.destroy_client()
-
         if pic is not None:
             binary_file = open(fq_filename, "wb")
             binary_file.write(pic)
@@ -73,7 +86,7 @@ class Protect:
 
     async def save_video(self, camera_id: str, dt: datetime, filename: str, offset: int):
         """Saves Clip from camera using delta offset around specified time."""
-        
+
         logger.info("  Fetching client...")
         client = await self.get_client()
 
@@ -90,8 +103,6 @@ class Protect:
                                       output_file = Path(fq_filename),
                                       chunk_size = 65536)
 
-        await self.destroy_client()
-
         return fq_filename
 
     async def get_cameras(self, camera_filter: list[str]=[]):
@@ -107,8 +118,6 @@ class Protect:
             }
             for camera in client.bootstrap.cameras.values()
         ]
-
-        await self.destroy_client()
 
         if camera_filter is None:
             return cameras
