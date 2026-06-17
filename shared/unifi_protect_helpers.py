@@ -6,7 +6,6 @@ using uiprotect module.
 """
 import asyncio
 import logging
-import time
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
@@ -20,10 +19,6 @@ logger = logging.getLogger(__name__)
 class Protect:
     """Helper class with functions around the uiprotect library"""
 
-    # Seconds of idle time before considering the session stale.
-    # Protect sessions are short-lived; refresh proactively to avoid 401s.
-    SESSION_STALE_SECONDS = 300  # 5 minutes
-
     def __init__(self, nvr_uri: str, user_name: str, password: str):
         uri = urlparse(nvr_uri)
 
@@ -33,20 +28,12 @@ class Protect:
         self.user_name = user_name
         self.password = password
         self.client = None
-        self._last_activity = 0.0
 
     def __del__(self):
         asyncio.run(self.destroy_client())
 
     async def get_client(self) -> ProtectApiClient:
-        """Retrieves a Unifi Protect Client, refreshing if session is stale."""
-        now = time.monotonic()
-
-        # If client exists but has been idle too long, destroy and recreate.
-        if self.client is not None and (now - self._last_activity) > self.SESSION_STALE_SECONDS:
-            logger.info("Protect session stale (%.0fs idle), refreshing...", now - self._last_activity)
-            await self.destroy_client()
-
+        """Retrieves a Unifi Protect Client."""
         if self.client is None:
             self.client = ProtectApiClient(host=self.host,
                                            port=self.port,
@@ -58,8 +45,26 @@ class Protect:
             # open a Websocket connection for updates
             await self.client.update()
 
-        self._last_activity = time.monotonic()
         return self.client
+
+    async def _with_client(self, func):
+        """Run an async function with the client, recreating it on failure.
+
+        *func* is called with the client as its only argument and should
+        return an awaitable.  Catches 'Event loop is closed' (RuntimeError)
+        and 401 auth errors, destroys the stale client, creates a fresh one,
+        and retries once.
+        """
+        try:
+            return await func(await self.get_client())
+        except Exception as e:
+            error_msg = str(e).lower()
+            # Event loop closed or auth failure — client is stale.
+            if "event loop" in error_msg or "401" in error_msg:
+                logger.warning("Protect client stale (%s), recreating...", e)
+                await self.destroy_client()
+                return await func(await self.get_client())
+            raise
 
     async def destroy_client(self):
         """Destroys a Unifi Protect Client"""
@@ -72,8 +77,7 @@ class Protect:
         """Saves Still from camera using specified time."""
         fq_filename = filename + ".jpg"
 
-        client = await self.get_client()
-        pic = await client.get_camera_snapshot(camera_id, dt=dt)
+        pic = await self._with_client(lambda c: c.get_camera_snapshot(camera_id, dt=dt))
 
         if pic is not None:
             binary_file = open(fq_filename, "wb")
@@ -88,7 +92,6 @@ class Protect:
         """Saves Clip from camera using delta offset around specified time."""
 
         logger.info("  Fetching client...")
-        client = await self.get_client()
 
         delta = timedelta(seconds = offset)
         start = dt-delta
@@ -97,27 +100,30 @@ class Protect:
 
         logger.debug(f"Video File: {fq_filename}")
 
-        await client.get_camera_video(camera_id, start, end,
-                                      channel_index = 0,
-                                      validate_channel_id = True,
-                                      output_file = Path(fq_filename),
-                                      chunk_size = 65536)
+        await self._with_client(
+            lambda c: c.get_camera_video(camera_id, start, end,
+                                          channel_index=0,
+                                          validate_channel_id=True,
+                                          output_file=Path(fq_filename),
+                                          chunk_size=65536))
 
         return fq_filename
 
     async def get_cameras(self, camera_filter: list[str]=[]):
         """Connects to UniFi Protect and enumerates cameras"""
-        client = await self.get_client()
 
-        # get names of your cameras
-        cameras = [
-            {
-                "name": camera.name,
-                "id": camera.id,
-                "filename": f"{self.get_camera_filename(camera)}"
-            }
-            for camera in client.bootstrap.cameras.values()
-        ]
+        def _extract(cameras_dict):
+            return [
+                {
+                    "name": camera.name,
+                    "id": camera.id,
+                    "filename": f"{self.get_camera_filename(camera)}"
+                }
+                for camera in cameras_dict.values()
+            ]
+
+        cameras = await self._with_client(
+            lambda c: _extract(c.bootstrap.cameras))
 
         if camera_filter is None:
             return cameras
@@ -129,15 +135,15 @@ class Protect:
         plates = []
 
         logger.info("  Fetching client...")
-        client = await self.get_client()
 
         delta = timedelta(seconds = offset)
         start = dt-delta
         end = dt+delta
 
-        events = await client.get_events(start=start, 
-                                         end=end, 
-                                         smart_detect_types=[SmartDetectObjectType.LICENSE_PLATE])
+        events = await self._with_client(
+            lambda c: c.get_events(start=start,
+                                   end=end,
+                                   smart_detect_types=[SmartDetectObjectType.LICENSE_PLATE]))
 
         for event in events:
             if source == event.camera_id:
