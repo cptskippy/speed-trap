@@ -1,11 +1,13 @@
 """
 task_video_clip_fetcher.py
 
-Subscribes to an MQTT topic and exports video clips 
+Subscribes to an MQTT topic and exports video clips
 from the NVR based on timestamps in published messages
 """
 import asyncio
 import json
+import signal
+import sys
 from datetime import datetime
 from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, retry_with_backoff, load_config
 
@@ -51,7 +53,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print(f"Subscribed to topic: {MQTT_SUBSCRIBE_TOPIC}")
 
 def on_message(client, userdata, message):
-    """"Processes the message from MQTT Broker"""
+    """Processes the message from MQTT Broker"""
     try:
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
@@ -71,21 +73,18 @@ def on_message(client, userdata, message):
     except Exception as e:
         print(f"Error processing message: {e}")
 
-async def save_media(nvr_client, cams: list[dict[str, str]], dt, path: str):
-    """Retrieves videos from specified cameras and the specified times of the length defined"""
+
+async def fetch_and_save(dt: datetime, path: str):
+    cams = await NVR_CLIENT.get_cameras(CAMERA_NAMES)
+
     output_files = []
-
     for camera in cams:
-
-        filename = path  + "/" + camera["filename"]
+        filename = path + "/" + camera["filename"]
         cam_id = camera["id"]
         print(f"  For camera: {cam_id}")
 
         try:
-
-
-            video_name = await nvr_client.save_video(cam_id, dt, filename, DELTA_OFFSET)
-            
+            video_name = await NVR_CLIENT.save_video(cam_id, dt, filename, DELTA_OFFSET)
             output_files.append(video_name)
             print(f"  Saved video: {video_name}\n")
 
@@ -94,6 +93,7 @@ async def save_media(nvr_client, cams: list[dict[str, str]], dt, path: str):
             print(f"  Exception Details: {e}")
 
     return output_files
+
 
 def handle_event(data):
     """Creates a folder based on the timestamp of the event"""
@@ -108,18 +108,16 @@ def handle_event(data):
         nonlocal max_videos
         nonlocal occurred
         nonlocal data
-        cameras = asyncio.run(NVR_CLIENT.get_cameras(CAMERA_NAMES))
-        print("Saving media...")
         folder = data.get("folder")
-        videos = asyncio.run(save_media(NVR_CLIENT, cameras, occurred, folder))
+        videos = asyncio.run(fetch_and_save(occurred, folder))
+
         if not videos:
             raise ProtectMediaNotAvailable("All cameras returned no video clips", 500)
         max_videos = videos
         return videos
 
     try:
-        # Retrieve a list of cameras from the NVR
-        print("Retrieving cameras...")
+        print("Retrieving cameras and saving media...")
         videos = retry_with_backoff(fetch_videos)
 
         # Update Payload
@@ -136,14 +134,31 @@ def handle_event(data):
         print(e)
 
         # Update Payload
-        data["error"] = e
+        data["error"] = str(e)
         payload = json.dumps(data)
 
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
         print(f"  Error Message Published: {MQTT_ERROR_TOPIC}")
 
 
+def shutdown(*_args):
+    """Gracefully closes the NVR client's connection before exiting."""
+    print("\nShutting down, closing NVR client...")
+    try:
+        asyncio.run(NVR_CLIENT.destroy_client())
+    except RuntimeError:
+        # Event loop state during interpreter shutdown can be unpredictable;
+        # at worst we skip a clean close, we never crash on exit.
+        pass
+    sys.exit(0)
+
 
 # Configure MQTT and wait...
 client = MqttClientWrapper(MQTT_URI, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD)
 client.connect(on_connect, on_message)
+
+# Ensure the long-lived NVR client connection is closed deliberately on
+# Ctrl+C / SIGTERM, rather than relying on Protect.__del__ (which now only
+# logs a warning instead of trying to close anything itself).
+signal.signal(signal.SIGINT, shutdown)
+signal.signal(signal.SIGTERM, shutdown)

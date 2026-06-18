@@ -8,7 +8,8 @@ import asyncio
 import json
 from datetime import datetime
 import logging
-import shutil
+import signal
+import sys
 from shared import load_config, MqttClientWrapper, OpenAILicensePlateReader, Protect
 
 
@@ -111,6 +112,37 @@ def update_summary(summary_path, license_plate, vehicle_color, vehicle_type):
         json.dump(summary_data, f, indent=4)
         print("  File saved")
 
+async def get_lpr_reads(eventdata):
+    results = []
+
+    for camera in LPR_CAMERAS:
+
+        source = ""
+    
+        if LPR_METHOD == "OPENAI":
+            # Generate Path
+            file_name = camera["file_name"]
+            folder = eventdata.get("folder")
+            source = folder + "/" + file_name + image_extension
+
+        if LPR_METHOD == "PROTECT":
+            camera_name = camera["camera_id"]
+            cameras = await NVR_CLIENT.get_cameras([camera_name])
+            if len(cameras) > 0:
+                source = cameras[0]["id"]
+                
+        print(f"Source: {source}")
+
+        timestamp = eventdata.get("timestamp")
+        occurred = datetime.fromisoformat(timestamp)
+    
+        # Perform LPR
+        results = await LPR_CLIENT.get_license_plate_reads(source=source,
+                                                           dt=occurred,
+                                                           offset=DELTA_OFFSET)
+
+    return results
+
 
 def handle_event(data):
     """Performs a license plate read."""
@@ -143,41 +175,17 @@ def handle_event(data):
     #   ]
     # }
 
-    for camera in LPR_CAMERAS:
-
-        source = ""
-    
-        if LPR_METHOD == "OPENAI":
-            # Generate Path
-            file_name = camera["file_name"]
-            folder = data.get("folder")
-            source = folder + "/" + file_name + image_extension
-
-        if LPR_METHOD == "PROTECT":
-            camera_name = camera["camera_id"]
-            cameras = asyncio.run(NVR_CLIENT.get_cameras([camera_name]))
-            if len(cameras) > 0:
-                source = cameras[0]["id"]
-                
-        print(f"Source: {source}")
+    results = asyncio.run(get_lpr_reads(data))
 
 
-        timestamp = data.get("timestamp")
-        occurred = datetime.fromisoformat(timestamp)
-    
-        # Perform LPR
-        results = asyncio.run(LPR_CLIENT.get_license_plate_reads(source=source,
-                                                                 dt=occurred,
-                                                                 offset=DELTA_OFFSET))
+    if len(results) > 0:
+        result = results[0]
 
-        if len(results) > 0:
-            result = results[0]
-
-            status = result.status
-            error = result.error_message
-            plate = result.license_plate
-            vehicle_color = result.vehicle_color
-            vehicle_type = result.vehicle_type
+        status = result.status
+        error = result.error_message
+        plate = result.license_plate
+        vehicle_color = result.vehicle_color
+        vehicle_type = result.vehicle_type
 
     if status == "success":
       # Update Summary file
@@ -197,6 +205,24 @@ def handle_event(data):
     client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
     print(f"  Message Published: {MQTT_PUBLISH_TOPIC}")
 
+def shutdown(*_args):
+    """Gracefully closes the NVR client's connection before exiting."""
+    print("\nShutting down, closing NVR client...")
+    try:
+        asyncio.run(NVR_CLIENT.destroy_client())
+    except RuntimeError:
+        # Event loop state during interpreter shutdown can be unpredictable;
+        # at worst we skip a clean close, we never crash on exit.
+        pass
+    sys.exit(0)
+
+
 # Configure MQTT and wait...
 client = MqttClientWrapper(MQTT_URI, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD)
 client.connect(on_connect, on_message)
+
+# Ensure the long-lived NVR client connection is closed deliberately on
+# Ctrl+C / SIGTERM, rather than relying on Protect.__del__ (which now only
+# logs a warning instead of trying to close anything itself).
+signal.signal(signal.SIGINT, shutdown)
+signal.signal(signal.SIGTERM, shutdown)
