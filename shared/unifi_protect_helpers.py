@@ -2,10 +2,13 @@
 unifi_protect_helpers.py
 
 Helper classes for extracting media from a UniFi Protect Server
-using uiprotect module.
+using uiprotect module.  This class is designed for long running
+processes processes so it creates and manages it's on event loop 
+and exposes the async methods via synchronous methods.
 """
 import asyncio
 import logging
+import threading
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
@@ -26,21 +29,44 @@ class Protect:
 
         self.user_name = user_name
         self.password = password
-        self.client = None
+        self.client: ProtectApiClient | None = None
 
-    async def __aenter__(self) -> "Protect":
-        await self.get_client()
-        return self
+        self._loop = asyncio.new_event_loop()
+        self._loop_ready = threading.Event()
+        self._thread = threading.Thread(
+            target=self._run_loop,
+            name="ProtectEventLoop",
+            daemon=True,
+        )
+        self._thread.start()
+        self._loop_ready.wait()
 
-    async def __aexit__(self, exc_type, exc, tb):
-        await self.destroy_client()
+    def _run_loop(self):
+        asyncio.set_event_loop(self._loop)
+        self._loop_ready.set()
+        self._loop.run_forever()
+        self._loop.close()
+
+    def _run_coroutine(self, coro, timeout: float | None = None):
+        """Submits a coroutine to the background loop and blocks for the result """
+        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        return future.result(timeout=timeout)
+
+    def close(self):
+        """Closes the underlying client (if open) and stops the background loop."""
+        if self.client is not None:
+            try:
+                self._run_coroutine(self.destroy_client(), timeout=10)
+            except Exception:
+                logger.exception("Error closing Protect client during shutdown")
+
+        if self._loop.is_running():
+            self._loop.call_soon_threadsafe(self._loop.stop)
+        self._thread.join(timeout=10)
 
     def __del__(self):
-        if self.client is not None:
-            logger.warning(
-                "Protect instance destroyed without closing its client; "
-                "call await protect.destroy_client() or use 'async with Protect(...)'."
-            )
+        if getattr(self, "_thread", None) is not None and self._thread.is_alive():
+            logger.warning("Protect instance destroyed without calling close();")
 
     async def get_client(self) -> ProtectApiClient:
         """Retrieves a Unifi Protect Client"""
@@ -63,7 +89,7 @@ class Protect:
             await self.client.close_session()
             self.client = None
 
-    async def save_still(self, camera_id: str, dt: datetime, filename: str):
+    async def _save_still(self, camera_id: str, dt: datetime, filename: str):
         """Saves Still from camera using specified time."""
         fq_filename = filename + ".jpg"
 
@@ -78,7 +104,10 @@ class Protect:
 
         return fq_filename
 
-    async def save_video(self, camera_id: str, dt: datetime, filename: str, offset: int):
+    def save_still(self, camera_id: str, dt: datetime, filename: str):
+        return self._run_coroutine(self._save_still(camera_id, dt, filename))
+
+    async def _save_video(self, camera_id: str, dt: datetime, filename: str, offset: int):
         """Saves Clip from camera using delta offset around specified time."""
 
         logger.info("  Fetching client...")
@@ -99,7 +128,10 @@ class Protect:
 
         return fq_filename
 
-    async def get_cameras(self, camera_filter: list[str] = None):
+    def save_video(self, camera_id: str, dt: datetime, filename: str, offset: int):
+        return self._run_coroutine(self._save_video(camera_id, dt, filename, offset))
+
+    async def _get_cameras(self, camera_filter: list[str] = None):
         """Connects to UniFi Protect and enumerates cameras"""
         client = await self.get_client()
 
@@ -118,7 +150,10 @@ class Protect:
 
         return [camera for camera in cameras if camera['name'] in camera_filter]
 
-    async def get_license_plate_reads(self, source: str, dt: datetime, offset: int) -> list[LicensePlateRead]:
+    def get_cameras(self, camera_filter: list[str] = None):
+        return self._run_coroutine(self._get_cameras(camera_filter))
+
+    async def _get_license_plate_reads(self, source: str, dt: datetime, offset: int) -> list[LicensePlateRead]:
         """Returns LPR reads using delta offset around specified time."""
         plates = []
 
@@ -175,6 +210,9 @@ class Protect:
                         plates.append(lpr)    
                         
         return plates
+    
+    def get_license_plate_reads(self, source: str, dt: datetime, offset: int) -> list[LicensePlateRead]:
+        return self._run_coroutine(self._get_license_plate_reads(source, dt, offset))
     
     def get_camera_filename(self, camera: Camera):
         return camera.name.lower().replace(" ", "")

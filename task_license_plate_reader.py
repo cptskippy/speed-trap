@@ -112,7 +112,7 @@ def update_summary(summary_path, license_plate, vehicle_color, vehicle_type):
         json.dump(summary_data, f, indent=4)
         print("  File saved")
 
-async def get_lpr_reads(eventdata):
+def get_lpr_reads(eventdata):
     results = []
 
     for camera in LPR_CAMERAS:
@@ -127,7 +127,7 @@ async def get_lpr_reads(eventdata):
 
         if LPR_METHOD == "PROTECT":
             camera_name = camera["camera_id"]
-            cameras = await NVR_CLIENT.get_cameras([camera_name])
+            cameras = NVR_CLIENT.get_cameras([camera_name])
             if len(cameras) > 0:
                 source = cameras[0]["id"]
                 
@@ -137,9 +137,9 @@ async def get_lpr_reads(eventdata):
         occurred = datetime.fromisoformat(timestamp)
     
         # Perform LPR
-        results = await LPR_CLIENT.get_license_plate_reads(source=source,
-                                                           dt=occurred,
-                                                           offset=DELTA_OFFSET)
+        results = LPR_CLIENT.get_license_plate_reads(source=source,
+                                                     dt=occurred,
+                                                     offset=DELTA_OFFSET)
 
     return results
 
@@ -175,7 +175,7 @@ def handle_event(data):
     #   ]
     # }
 
-    results = asyncio.run(get_lpr_reads(data))
+    results = get_lpr_reads(data)
 
 
     if len(results) > 0:
@@ -205,15 +205,11 @@ def handle_event(data):
     client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
     print(f"  Message Published: {MQTT_PUBLISH_TOPIC}")
 
+
 def shutdown(*_args):
     """Gracefully closes the NVR client's connection before exiting."""
     print("\nShutting down, closing NVR client...")
-    try:
-        asyncio.run(NVR_CLIENT.destroy_client())
-    except RuntimeError:
-        # Event loop state during interpreter shutdown can be unpredictable;
-        # at worst we skip a clean close, we never crash on exit.
-        pass
+    NVR_CLIENT.close()
     sys.exit(0)
 
 

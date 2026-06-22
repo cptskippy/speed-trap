@@ -4,7 +4,6 @@ task_video_clip_fetcher.py
 Subscribes to an MQTT topic and exports video clips
 from the NVR based on timestamps in published messages
 """
-import asyncio
 import json
 import signal
 import sys
@@ -44,6 +43,7 @@ CAMERA_NAMES = [cam["camera_id"] for cam in cameras_config]
 
 # Configure NVR client
 NVR_CLIENT = Protect(UI_URI, UI_USERNAME, UI_PASSWORD)
+CAMERAS = NVR_CLIENT.get_cameras(CAMERA_NAMES)
 
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""
@@ -74,27 +74,6 @@ def on_message(client, userdata, message):
         print(f"Error processing message: {e}")
 
 
-async def fetch_and_save(dt: datetime, path: str):
-    cams = await NVR_CLIENT.get_cameras(CAMERA_NAMES)
-
-    output_files = []
-    for camera in cams:
-        filename = path + "/" + camera["filename"]
-        cam_id = camera["id"]
-        print(f"  For camera: {cam_id}")
-
-        try:
-            video_name = await NVR_CLIENT.save_video(cam_id, dt, filename, DELTA_OFFSET)
-            output_files.append(video_name)
-            print(f"  Saved video: {video_name}\n")
-
-        except Exception as e:
-            print(f"Error Saving Cam: {cam_id}")
-            print(f"  Exception Details: {e}")
-
-    return output_files
-
-
 def handle_event(data):
     """Creates a folder based on the timestamp of the event"""
 
@@ -102,18 +81,29 @@ def handle_event(data):
     timestamp = data.get("timestamp")
     occurred = datetime.fromisoformat(timestamp)
 
-    max_videos = None
-
     def fetch_videos():
-        nonlocal max_videos
         nonlocal occurred
         nonlocal data
         folder = data.get("folder")
-        videos = asyncio.run(fetch_and_save(occurred, folder))
+
+        videos = []
+        for camera in CAMERAS:
+            filename = folder + "/" + camera["filename"]
+            cam_id = camera["id"]
+            print(f"  For camera: {cam_id}")
+
+            try:
+                video_name = NVR_CLIENT.save_video(cam_id, occurred, filename, DELTA_OFFSET)
+                videos.append(video_name)
+                print(f"  Saved video: {video_name}\n")
+
+            except Exception as e:
+                print(f"Error Saving Cam: {cam_id}")
+                print(f"  Exception Details: {e}")
 
         if not videos:
             raise ProtectMediaNotAvailable("All cameras returned no video clips", 500)
-        max_videos = videos
+        
         return videos
 
     try:
@@ -144,12 +134,7 @@ def handle_event(data):
 def shutdown(*_args):
     """Gracefully closes the NVR client's connection before exiting."""
     print("\nShutting down, closing NVR client...")
-    try:
-        asyncio.run(NVR_CLIENT.destroy_client())
-    except RuntimeError:
-        # Event loop state during interpreter shutdown can be unpredictable;
-        # at worst we skip a clean close, we never crash on exit.
-        pass
+    NVR_CLIENT.close()
     sys.exit(0)
 
 
