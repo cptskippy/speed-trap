@@ -93,7 +93,10 @@ def handle_event(data):
             print(f"  For camera: {cam_id}")
 
             try:
-                video_name = NVR_CLIENT.save_video(cam_id, occurred, filename, DELTA_OFFSET)
+                video_name = retry_with_backoff(
+                    NVR_CLIENT.save_video,
+                    cam_id, occurred, filename, DELTA_OFFSET
+                )
                 videos.append(video_name)
                 print(f"  Saved video: {video_name}\n")
 
@@ -103,12 +106,12 @@ def handle_event(data):
 
         if not videos:
             raise ProtectMediaNotAvailable("All cameras returned no video clips", 500)
-        
+
         return videos
 
     try:
         print("Retrieving cameras and saving media...")
-        videos = retry_with_backoff(fetch_videos)
+        videos = fetch_videos()
 
         # Update Payload
         data["videos"] = videos
