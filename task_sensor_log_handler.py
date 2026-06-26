@@ -4,6 +4,7 @@ task_sensor_log_handler.py
 Subscribes to an MQTT topic and exports sensor 
 logs based on timestamp in published messages
 """
+import os
 import urllib.parse
 import json
 from datetime import datetime, timedelta
@@ -170,9 +171,14 @@ def handle_event(data):
     data_file = f"{folder}/{DATA_FILE_NAME}"
     print(f"  Save file: {data_file}")
 
-    with open(data_file, "w", encoding="utf-8") as f:
-        json.dump(sensor_data, f, indent=4)
-        print("  File saved")
+    has_data = sensor_data.get("approaching") or sensor_data.get("retreating")
+
+    if not has_data and os.path.exists(data_file):
+        logger.warning(f"  No sensor data from HA — preserving existing {data_file}")
+    else:
+        with open(data_file, "w", encoding="utf-8") as f:
+            json.dump(sensor_data, f, indent=4)
+            print("  File saved")
 
     # Summarize Data
     summary_file = f"{folder}/{SUMMARY_FILE_NAME}"

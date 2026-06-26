@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -50,7 +51,12 @@ class SummaryGenerator:
                         "vehicle_type": vehicle_type}
         
         logger.info(f"  Summary Data: {summary_data}")
-        self._save_summary_file(summary_file, summary_data)
+
+        # If top_speed is still the default (no real data) and summary already exists, preserve it
+        if top_speed == self._min_speed and os.path.exists(summary_file):
+            logger.warning(f"  No speed data available — preserving existing {summary_file}")
+        else:
+            self._save_summary_file(summary_file, summary_data)
 
     def _get_iso_from_folder(self, file_path: str):
         folder = Path(file_path).parent.name
