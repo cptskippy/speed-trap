@@ -149,6 +149,8 @@ def handle_event(data):
     status = "failure"
     error = "No result"
     plate = ""
+    vehicle_color = ""
+    vehicle_type = ""
 
     # {
     #   "timestamp": "2025-08-15T19:54:57.406713+00:00", 
