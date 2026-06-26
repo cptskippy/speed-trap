@@ -161,7 +161,7 @@ class Classifier:
         results = output[0, 0, :, :]
 
         # We need to parse the results into Detections
-        detections = list[Detection]()
+        detections: list[Detection] = []
 
         for r in results:
             d = self._parse_and_filter(r)
@@ -229,7 +229,7 @@ class Classifier:
 
         results = self._get_detections(img)
 
-        detections = list[Detection]()
+        detections: list[Detection] = []
 
         for d in results:
             # Extract the corners around the detection.
