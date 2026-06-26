@@ -64,7 +64,7 @@ def on_message(client, userdata, message):
         handle_event(data)
 
     except json.JSONDecodeError:
-        print("Received invalid JSON: {message}")
+        print(f"Received invalid JSON: {message}")
     except Exception as e:
         print(f"Error processing message: {e}")
 

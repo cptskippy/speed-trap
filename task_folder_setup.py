@@ -39,6 +39,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
 
 def on_message(client, userdata, message):
     """"Processes the message from MQTT Broker"""
+    data = {}
     try:
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
@@ -50,15 +51,19 @@ def on_message(client, userdata, message):
 
         setup_folder(data)
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
         print("Received invalid JSON")
-        client.publish(MQTT_PUBLISH_TOPIC, message.payload, MQTT_QOS)
+        # Update Payload
+        data = {"error": str(e)}
+        payload = json.dumps(data)
+
+        client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
         print(f"  Error Message Published: {MQTT_ERROR_TOPIC}")
 
     except Exception as e:
         print(f"Error processing message: {e}")
         # Update Payload
-        data["error"] = e
+        data["error"] = str(e)
         payload = json.dumps(data)
 
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)

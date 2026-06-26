@@ -88,7 +88,7 @@ def on_message(client, userdata, message):
         handle_event(data)
 
     except json.JSONDecodeError:
-        print("Received invalid JSON: {message}")
+        print(f"Received invalid JSON: {message}")
     except Exception as e:
         print(f"Error processing message: {e}")
 
@@ -137,9 +137,9 @@ def get_lpr_reads(eventdata):
         occurred = datetime.fromisoformat(timestamp)
     
         # Perform LPR
-        results = LPR_CLIENT.get_license_plate_reads(source=source,
+        results.extend(LPR_CLIENT.get_license_plate_reads(source=source,
                                                      dt=occurred,
-                                                     offset=DELTA_OFFSET)
+                                                     offset=DELTA_OFFSET))
 
     return results
 
@@ -149,6 +149,8 @@ def handle_event(data):
     status = "failure"
     error = "No result"
     plate = ""
+    vehicle_color = ""
+    vehicle_type = ""
 
     # {
     #   "timestamp": "2025-08-15T19:54:57.406713+00:00", 
