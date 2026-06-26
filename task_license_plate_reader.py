@@ -137,9 +137,9 @@ def get_lpr_reads(eventdata):
         occurred = datetime.fromisoformat(timestamp)
     
         # Perform LPR
-        results = LPR_CLIENT.get_license_plate_reads(source=source,
+        results.extend(LPR_CLIENT.get_license_plate_reads(source=source,
                                                      dt=occurred,
-                                                     offset=DELTA_OFFSET)
+                                                     offset=DELTA_OFFSET))
 
     return results
 
