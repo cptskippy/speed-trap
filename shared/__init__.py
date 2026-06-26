@@ -9,7 +9,7 @@ from .license_plate_reader_helpers import LicensePlateRead, BoundingBox
 from .mqtt_client_wrapper import MqttClientWrapper
 from .config_loader import load_config
 from .home_assistant_api_helper import HomeAssistantRest, HomeAssistantWebSocket
-from .unifi_protect_helpers import Protect, ProtectMediaNotAvailable
+from .unifi_protect_helpers import Protect, ProtectMediaNotAvailable, ProtectCredentialError
 from . import opencv_detection_helpers
 from . import opencv_contours_clustering
 from .opencv_classifier import Classifier, Detection

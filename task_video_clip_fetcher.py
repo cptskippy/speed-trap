@@ -8,7 +8,7 @@ import json
 import signal
 import sys
 from datetime import datetime
-from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, retry_with_backoff, load_config
+from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, ProtectCredentialError, retry_with_backoff, load_config
 
 
 VERBOSE = False
@@ -99,6 +99,11 @@ def handle_event(data):
                 )
                 videos.append(video_name)
                 print(f"  Saved video: {video_name}\n")
+
+            except ProtectCredentialError as e:
+                print(f"Credential error for Cam: {cam_id}")
+                print(f"  {e}")
+                raise
 
             except Exception as e:
                 print(f"Error Saving Cam: {cam_id}")
