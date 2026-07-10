@@ -5,6 +5,7 @@ Subscribes to an MQTT topic and exports sensor
 logs based on timestamp in published messages
 """
 import os
+import time
 import urllib.parse
 import json
 from datetime import datetime, timedelta
@@ -120,8 +121,15 @@ def clean_sensor_data(sensor_data):
 def get_sensor_data(dt):
     """Uses a timestamp to query Home Assistant for sensor data"""
 
-    before = dt - timedelta(seconds=10)
-    after = dt + timedelta(seconds=10)
+    before = dt - timedelta(seconds=DELTA_OFFSET)
+    after = dt + timedelta(seconds=DELTA_OFFSET)
+
+    # Wait until the post-event window has elapsed so we don't miss data
+    now = datetime.now(dt.tzinfo or datetime.now().astimezone().tzinfo)
+    if now < after:
+        wait_seconds = (after - now).total_seconds()
+        logger.info(f"  Waiting {wait_seconds:.1f}s for post-event window to elapse")
+        time.sleep(wait_seconds)
 
     start_time = urllib.parse.quote(before.isoformat())
     end_time = urllib.parse.quote(after.isoformat())
