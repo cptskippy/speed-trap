@@ -74,7 +74,7 @@ class MqttClientWrapper:
             self.custom_on_connect(client, userdata, flags, reason_code, properties)
 
     def on_message(self, client, userdata, message):
-        """"Receive the message from MQTT Broker"""
+        """Receive the message from MQTT Broker"""
 
         try:
             payload = message.payload.decode('utf-8')
