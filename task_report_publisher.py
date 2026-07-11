@@ -49,7 +49,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print(f"Subscribed to topic: {MQTT_SUBSCRIBE_TOPIC}")
 
 def on_message(client, userdata, message):
-    """"Processes the message from MQTT Broker"""
+    """Processes the message from MQTT Broker"""
     try:
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)

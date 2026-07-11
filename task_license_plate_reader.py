@@ -53,7 +53,7 @@ LPR_METHOD = task_config["lpr_method"]
 UI_URI = protect_config["uri"]
 UI_USERNAME = protect_config["username"]
 UI_PASSWORD = protect_config["password"]
-LPR_CAMERAS = [cam for cam in cameras_config if cam["perform_lpr"] == True]
+LPR_CAMERAS = [cam for cam in cameras_config if cam["perform_lpr"]]
 
 # Configure NVR client
 NVR_CLIENT = Protect(UI_URI, UI_USERNAME, UI_PASSWORD)
@@ -73,7 +73,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print(f"Subscribed to topic: {MQTT_SUBSCRIBE_TOPIC}")
 
 def on_message(client, userdata, message):
-    """"Processes the message from MQTT Broker"""
+    """Processes the message from MQTT Broker"""
     try:
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
@@ -99,7 +99,7 @@ def update_summary(summary_path, license_plate, vehicle_color, vehicle_type):
     logger.debug(f"  Opening summary data: {summary_path}")
 
     with open(summary_path, "r") as f:
-      summary_data = json.load(f)
+        summary_data = json.load(f)
 
     logger.debug(f"  Updating summary data...")
     summary_data["license_plate"] = license_plate

@@ -85,7 +85,7 @@ class VideoProcessor:
                     f"confidence_threshold={self._confidence_threshold:.2f}, ")
 
     def _prep_frame(self, frame, zones):
-        """"""
+        """Prepare a frame for processing."""
         # Draw over areas we want to exclude
         redacted = self._dh_draw_polygons(frame, zones)
 
@@ -173,7 +173,7 @@ class VideoProcessor:
                 result = self._dh_point_in_polygon(point, polygon_np)
 
 
-            if result == True:
+            if result:
                 state.area_entered_index = 0
                 state.area_entered_frame = frame
                 logger.debug("Inside Polygon.")
@@ -271,7 +271,7 @@ class VideoProcessor:
         # cv2.imshow("Frame",imutils.resize(frame, width=960))
         # cv2.waitKey()
 
-        if crossed == True:
+        if crossed:
             return None
         
         return keyFrame
