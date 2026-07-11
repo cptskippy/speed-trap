@@ -4,16 +4,14 @@ task_video_clip_fetcher.py
 Subscribes to an MQTT topic and exports video clips
 from the NVR based on timestamps in published messages
 """
+import logging
 import json
 import signal
 import sys
 from datetime import datetime
 from shared import MqttClientWrapper, Protect, ProtectMediaNotAvailable, ProtectCredentialError, retry_with_backoff, load_config
 
-
-VERBOSE = False
-DEBUG = False
-LOGGING = False
+logger = logging.getLogger(__name__)
 
 # Load configuration from yaml
 config = load_config()
@@ -45,12 +43,13 @@ CAMERA_NAMES = [cam["camera_id"] for cam in cameras_config]
 NVR_CLIENT = Protect(UI_URI, UI_USERNAME, UI_PASSWORD)
 CAMERAS = NVR_CLIENT.get_cameras(CAMERA_NAMES)
 
+
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""
-
     if reason_code == 0:
         client.subscribe(MQTT_SUBSCRIBE_TOPIC, MQTT_QOS)
-        print(f"Subscribed to topic: {MQTT_SUBSCRIBE_TOPIC}")
+        logger.info("Subscribed to topic: %s", MQTT_SUBSCRIBE_TOPIC)
+
 
 def on_message(client, userdata, message):
     """Processes the message from MQTT Broker"""
@@ -58,23 +57,23 @@ def on_message(client, userdata, message):
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
 
-        print("\nVideo Event Received:")
-        print(f"  Timestamp: {data.get('timestamp')}")
-        print(f"  Sensor ID: {data.get('sensor_id')}")
-        print(f"  Speed: {data.get('speed')} {data.get('uom')}")
-        print(f"  Folder: {data.get('folder')}")
-        print(f"  Data File: {data.get('data_file')}")
-        print(f"  Payload: {payload}")
+        logger.info("Video Event Received:")
+        logger.info("  Timestamp: %s", data.get('timestamp'))
+        logger.info("  Sensor ID: %s", data.get('sensor_id'))
+        logger.info("  Speed: %s %s", data.get('speed'), data.get('uom'))
+        logger.info("  Folder: %s", data.get('folder'))
+        logger.info("  Data File: %s", data.get('data_file'))
+        logger.debug("  Payload: %s", payload)
 
-        handle_event(data)
+        handle_event(client, data)
 
-    except json.JSONDecodeError:
-        print(f"Received invalid JSON: {message}")
+    except json.JSONDecodeError as e:
+        logger.error("Received invalid JSON: %s", e)
     except Exception as e:
-        print(f"Error processing message: {e}")
+        logger.exception("Error processing message: %s", e)
 
 
-def handle_event(data):
+def handle_event(client, data):
     """Creates a folder based on the timestamp of the event"""
 
     # Convert timestamp to string
@@ -90,7 +89,7 @@ def handle_event(data):
         for camera in CAMERAS:
             filename = folder + "/" + camera["filename"]
             cam_id = camera["id"]
-            print(f"  For camera: {cam_id}")
+            logger.info("  For camera: %s", cam_id)
 
             try:
                 video_name = retry_with_backoff(
@@ -98,16 +97,14 @@ def handle_event(data):
                     cam_id, occurred, filename, DELTA_OFFSET
                 )
                 videos.append(video_name)
-                print(f"  Saved video: {video_name}\n")
+                logger.info("  Saved video: %s", video_name)
 
             except ProtectCredentialError as e:
-                print(f"Credential error for Cam: {cam_id}")
-                print(f"  {e}")
+                logger.error("Credential error for camera: %s - %s", cam_id, e)
                 raise
 
             except Exception as e:
-                print(f"Error Saving Cam: {cam_id}")
-                print(f"  Exception Details: {e}")
+                logger.error("Error saving video for camera %s: %s", cam_id, e)
 
         if not videos:
             raise ProtectMediaNotAvailable("All cameras returned no video clips", 500)
@@ -115,33 +112,32 @@ def handle_event(data):
         return videos
 
     try:
-        print("Retrieving cameras and saving media...")
+        logger.info("Retrieving cameras and saving media...")
         videos = fetch_videos()
 
         # Update Payload
         data["videos"] = videos
         payload = json.dumps(data)
-        print(f"  New Payload: {payload}")
+        logger.debug("  New Payload: %s", payload)
 
         # Publish message for next task
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
-        print(f"  Message Published: {MQTT_PUBLISH_TOPIC}")
+        logger.info("  Message Published: %s", MQTT_PUBLISH_TOPIC)
 
     except ProtectMediaNotAvailable as e:
-        print("Media Not Available.")
-        print(e)
+        logger.error("Media Not Available: %s", e)
 
         # Update Payload
         data["error"] = str(e)
         payload = json.dumps(data)
 
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
-        print(f"  Error Message Published: {MQTT_ERROR_TOPIC}")
+        logger.error("  Error message published to: %s", MQTT_ERROR_TOPIC)
 
 
 def shutdown(*_args):
     """Gracefully closes the NVR client's connection before exiting."""
-    print("\nShutting down, closing NVR client...")
+    logger.info("Shutting down, closing NVR client...")
     NVR_CLIENT.close()
     sys.exit(0)
 

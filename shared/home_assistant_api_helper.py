@@ -5,8 +5,12 @@ Implements wrapper classes for Websocket and Rest request
 for extracting data from a Home Assistant Server
 """
 import json
+import logging
 import requests
 import websockets
+
+logger = logging.getLogger(__name__)
+
 
 class HomeAssistantWebSocket:
     """Helper class with functions around the websocket api"""
@@ -18,7 +22,7 @@ class HomeAssistantWebSocket:
         """Connect to the defined Home Assistant Server via Websocket"""
         async with websockets.connect(self.url) as websocket:
             response = await websocket.recv()
-            #print("Connection Response:", response)
+            logger.debug("Connection Response: %s", response)
 
             # Authenticate with Home Assistant
             auth_message = {
@@ -27,7 +31,7 @@ class HomeAssistantWebSocket:
             }
             await websocket.send(json.dumps(auth_message))
             response = await websocket.recv()
-            #print("Authentication Response:", response)
+            logger.debug("Authentication Response: %s", response)
 
             subscribe_message = {
                 "id": subscription_id,
@@ -37,18 +41,19 @@ class HomeAssistantWebSocket:
 
             await websocket.send(json.dumps(subscribe_message))
             response = await websocket.recv()
-            #print("Subscription Response:", response)
+            logger.debug("Subscription Response: %s", response)
 
             data = json.loads(response)
 
-            if data["success"] is True:
-            # Listen for events and trigger the callback
+            if data["success"]:
+                # Listen for events and trigger the callback
                 while True:
                     event = await websocket.recv()
-                    #print("Received Event:", event)
+                    logger.debug("Received Event: %s", event)
                     await callback(event)
             else:
-                print(response)
+                logger.error("Subscription failed: %s", response)
+
 
 class HomeAssistantRest:
     """Helper class with functions around the rest api"""
@@ -57,7 +62,7 @@ class HomeAssistantRest:
         self.bearer_token = bearer_token
 
     def get_data(self, query, timeout=10):
-        """Queries a REST endpoing and returns JSON"""
+        """Queries a REST endpoint and returns JSON"""
 
         # Set up the headers with the Authorization token
         headers = {
@@ -76,9 +81,9 @@ class HomeAssistantRest:
             return response.json()
 
         except requests.exceptions.RequestException as e:
-            print(f"Request failed: {e}")
+            logger.error("Request failed: %s", e)
             return {}  # Return empty object on failure
 
         except ValueError:
-            print("Failed to parse JSON.")
+            logger.error("Failed to parse JSON.")
             return {}  # JSON parsing failed

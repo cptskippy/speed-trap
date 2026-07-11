@@ -10,26 +10,17 @@ TODO::
 * Classify Objects using Model
 * Update MQTT with images & meta data
 """
+import logging
 import cv2
 from datetime import datetime
 import imutils
 import json
-import logging
 import os
 
 from shared import MqttClientWrapper, load_config
 from shared import VideoProcessor, load_config
 
-
-# logging.basicConfig(
-#     level=logging.DEBUG,  # or INFO, WARNING
-#     format='[%(levelname)s] %(name)s: %(message)s'
-# )
-
 logger = logging.getLogger(__name__)
-# logger.debug("Debug message")
-# logger.info("Info message")
-# logger.warning("Warning message")
 
 # Load configuration from yaml
 config = load_config()
@@ -61,35 +52,37 @@ MQTT_SUBSCRIBE_TOPIC = task_config["mqtt"]["topics"]["subscribe"]
 MQTT_PUBLISH_TOPIC = task_config["mqtt"]["topics"]["publish"]
 MQTT_ERROR_TOPIC = task_config["mqtt"]["topics"]["error"]
 
+
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""
-
     if reason_code == 0:
         client.subscribe(MQTT_SUBSCRIBE_TOPIC, MQTT_QOS)
-        print(f"Subscribed to topic: {MQTT_SUBSCRIBE_TOPIC}")
+        logger.info("Subscribed to topic: %s", MQTT_SUBSCRIBE_TOPIC)
+
 
 def on_message(client, userdata, message):
     """Processes the message from MQTT Broker"""
     try:
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
-        print("\nClassifier Event Received:")
-        print(f"  Timestamp: {data.get('timestamp')}")
-        print(f"  Sensor ID: {data.get('sensor_id')}")
-        print(f"  Speed: {data.get('speed')} {data.get('uom')}")
-        print(f"  Folder: {data.get('folder')}")
-        print(f"  Data File: {data.get('data_file')}")
-        print(f"  Video Files: {data.get('videos')}")
-        print(f"  Payload: {payload}")
+        logger.info("Classifier Event Received:")
+        logger.info("  Timestamp: %s", data.get('timestamp'))
+        logger.info("  Sensor ID: %s", data.get('sensor_id'))
+        logger.info("  Speed: %s %s", data.get('speed'), data.get('uom'))
+        logger.info("  Folder: %s", data.get('folder'))
+        logger.info("  Data File: %s", data.get('data_file'))
+        logger.info("  Video Files: %s", data.get('videos'))
+        logger.debug("  Payload: %s", payload)
 
-        handle_event(data)
+        handle_event(client, data)
 
-    except json.JSONDecodeError:
-        print(f"Received invalid JSON: {message}")
+    except json.JSONDecodeError as e:
+        logger.error("Received invalid JSON: %s", e)
     except Exception as e:
-        print(f"Error processing message: {e}")
+        logger.exception("Error processing message: %s", e)
 
-def handle_event(data):
+
+def handle_event(client, data):
     # {
     #     "timestamp": "2025-06-10T22:47:44", 
     #     "speed": 28.6, 
@@ -104,46 +97,45 @@ def handle_event(data):
     #     ]
     # }
 
-    
     # Convert timestamp to string
     timestamp = data.get("timestamp")
     occurred = datetime.fromisoformat(timestamp)
 
     try:
-        print("Fetching media...")
+        logger.info("Fetching media...")
         videos = data.get("videos")
-        
+
         # VideoProcessor
         vp = VideoProcessor(PROTOTXT, MODEL, CLASSES, CLASSES_TO_TRACK, CONFIDENCE_THRESHOLD, LEARNING_RATE)
 
         images, thumbs = vp.process_videos(videos, camera_details, video_extension, image_extension)
 
-        print(f"  Images: {images}")
-        print(f"  Thumbs: {thumbs}")
+        logger.info("  Images: %s", images)
+        logger.info("  Thumbs: %s", thumbs)
 
         # Update Payload
         data["images"] = images
         data["thumbnails"] = thumbs
 
-        print(f"  Appending Payload...")
-        
+        logger.info("  Appending to payload...")
+
         payload = json.dumps(data)
-        print(f"  New Payload: {payload}")
+        logger.debug("  New Payload: %s", payload)
 
         # Publish message for next task
-        print(f"  Publishing Message...")
+        logger.info("  Publishing message...")
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
-        print(f"  Message Published: {MQTT_PUBLISH_TOPIC}")
+        logger.info("  Message Published: %s", MQTT_PUBLISH_TOPIC)
 
     except Exception as e:
-        print(f"Exception Occurred: {e}")
+        logger.exception("Exception occurred: %s", e)
 
         # Update Payload
         data["error"] = str(e)
         payload = json.dumps(data)
 
         client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
-        print(f"  Error Message Published: {MQTT_ERROR_TOPIC}")
+        logger.error("  Error message published to: %s", MQTT_ERROR_TOPIC)
 
 
 # Configure MQTT and wait...

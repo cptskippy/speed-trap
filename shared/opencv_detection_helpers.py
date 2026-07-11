@@ -13,9 +13,6 @@ from typing import Optional
 import re
 
 logger = logging.getLogger(__name__)
-# logger.debug("Debug message")
-# logger.info("Info message")
-# logger.warning("Warning message")
 
 
 def get_crop_contour(frame, 
@@ -70,9 +67,9 @@ def get_crop_contour(frame,
     contour_crop = frame[y:y+h, x:x+w]
     bounding_box = (x, y, w, h)
 
-    logger.debug(f"Contour Bounding Box: {(x, y, w, h)}")
-    logger.debug(f"  Box Area: {(w * h)}")
-    logger.debug(f"  Min Area: {min_detection_area}")
+    logger.debug("Contour Bounding Box: %s", (x, y, w, h))
+    logger.debug("  Box Area: %s", (w * h))
+    logger.debug("  Min Area: %s", min_detection_area)
 
     return contour_crop, bounding_box
 
@@ -110,7 +107,7 @@ def detect_threshold_crossings(zone, detection):
         detection.threshold_crossed = le.seen
         detection.threshold_crop = le.crop
         detection.threshold_box = le.box
-        print("Threshold crossed")
+        logger.info("Threshold crossed (left edge)")
         cv2.line(detection.threshold_crop, l_p, l_q, (128,128,0), 3)
         cv2.line(detection.threshold_crop, z_p, z_q, (0,128,128), 3)
 
@@ -119,7 +116,7 @@ def detect_threshold_crossings(zone, detection):
         detection.threshold_crossed = le.seen
         detection.threshold_crop = le.crop
         detection.threshold_box = le.box
-        print("Threshold crossed")
+        logger.info("Threshold crossed (right edge)")
         cv2.line(detection.threshold_crop, r_p, r_q, (128,128,0), 3)
         cv2.line(detection.threshold_crop, z_p, z_q, (0,128,128), 3)
 
@@ -187,7 +184,7 @@ def draw_polygons(img, polygons, color = (0,0,255)) -> np.ndarray:
     output = img.copy()
 
     for polygon in polygons or []:
-        logger.debug(f"Drawing Polygon: {polygon}")
+        logger.debug("Drawing Polygon: %s", polygon)
         output = draw_polygon(output, polygon, color)
 
     return output
@@ -289,7 +286,7 @@ def agglomerative_detections(detections, threshold_distance=40.0):
             detections[index1] = merge_detections(detections[index1], detections[index2])
             del detections[index2]
         else:
-            print("Threshold too great: " + str(min_distance))
+            logger.debug("Threshold too great: %s", min_distance)
             break
 
     return detections

@@ -4,12 +4,12 @@ task_sensor_log_handler.py
 Subscribes to an MQTT topic and exports sensor 
 logs based on timestamp in published messages
 """
+import logging
 import os
 import time
 import urllib.parse
 import json
 from datetime import datetime, timedelta
-import logging
 from shared import MqttClientWrapper, HomeAssistantRest, SummaryGenerator, retry_with_backoff, load_config
 
 logger = logging.getLogger(__name__)
@@ -55,31 +55,33 @@ SUMMARY_FILE_NAME = task_config["summary_file_name"]
 
 SUMMARY_GENERATOR = SummaryGenerator(FOLDER_FORMAT, SPEED_THRESHOLD)
 
+
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""
-
     if reason_code == 0:
         client.subscribe(MQTT_SUBSCRIBE_TOPIC, MQTT_QOS)
-        print(f"Subscribed to topic: {MQTT_SUBSCRIBE_TOPIC}")
+        logger.info("Subscribed to topic: %s", MQTT_SUBSCRIBE_TOPIC)
+
 
 def on_message(client, userdata, message):
     """Processes the message from MQTT Broker"""
     try:
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
-        print("\nLogging Event Received:")
-        print(f"  Timestamp: {data.get('timestamp')}")
-        print(f"  Sensor ID: {data.get('sensor_id')}")
-        print(f"  Speed: {data.get('speed')} {data.get('uom')}")
-        print(f"  Folder: {data.get('folder')}")
-        print(f"  Payload: {payload}")
+        logger.info("Logging Event Received:")
+        logger.info("  Timestamp: %s", data.get('timestamp'))
+        logger.info("  Sensor ID: %s", data.get('sensor_id'))
+        logger.info("  Speed: %s %s", data.get('speed'), data.get('uom'))
+        logger.info("  Folder: %s", data.get('folder'))
+        logger.debug("  Payload: %s", payload)
 
-        handle_event(data)
+        handle_event(client, data)
 
-    except json.JSONDecodeError:
-        print(f"Received invalid JSON: {message}")
+    except json.JSONDecodeError as e:
+        logger.error("Received invalid JSON: %s", e)
     except Exception as e:
-        print(f"Error processing message: {e}")
+        logger.exception("Error processing message: %s", e)
+
 
 def parse_json(data):
     """Parses JSON from Home Assistant api to a list object"""
@@ -99,8 +101,10 @@ def parse_json(data):
 
     return approaching, retreating
 
+
 def format_json(data_list):
     return [{"speed": speed, "occurred": dt.isoformat()} for speed, dt in data_list]
+
 
 def clean_sensor_data(sensor_data):
     """Cleans sensor data to remove erroneous data points"""
@@ -113,10 +117,11 @@ def clean_sensor_data(sensor_data):
 
         expected_speed = (prev_speed + next_speed) / 2
         if (curr_speed < expected_speed) and (expected_speed - curr_speed) > ERRONEOUS_DATA_THRESHOLD:
-            logger.debug(f"Outlier at index {i}: {curr_speed} -> replacing with {expected_speed:.2f}")
+            logger.debug("Outlier at index %d: %s -> replacing with %.2f", i, curr_speed, expected_speed)
             cleaned_data[i]["speed"] = expected_speed
 
     return cleaned_data
+
 
 def get_sensor_data(dt):
     """Uses a timestamp to query Home Assistant for sensor data"""
@@ -128,7 +133,7 @@ def get_sensor_data(dt):
     now = datetime.now(dt.tzinfo or datetime.now().astimezone().tzinfo)
     if now < after:
         wait_seconds = (after - now).total_seconds()
-        logger.info(f"  Waiting {wait_seconds:.1f}s for post-event window to elapse")
+        logger.info("  Waiting %.1fs for post-event window to elapse", wait_seconds)
         time.sleep(wait_seconds)
 
     start_time = urllib.parse.quote(before.isoformat())
@@ -151,7 +156,8 @@ def get_sensor_data(dt):
 
     return {"approaching": ac, "retreating": rc}
 
-def handle_event(data):
+
+def handle_event(client, data):
     """Creates a folder based on the timestamp of the event"""
 
     # Convert timestamp to string
@@ -159,7 +165,7 @@ def handle_event(data):
     occurred = datetime.fromisoformat(timestamp)
     #local = occurred.astimezone()
 
-    print("Saving data:")
+    logger.info("Saving data:")
 
     # Pull data from Home Assistant with retry
     try:
@@ -169,24 +175,24 @@ def handle_event(data):
             on_empty=lambda r: not r.get("approaching") and not r.get("retreating"),
         )
     except Exception as e:
-        print(f"  Failed to retrieve sensor data: {e}")
+        logger.error("  Failed to retrieve sensor data: %s", e)
         sensor_data = {"approaching": [], "retreating": []}
 
-    logger.debug(f"  Sensor data: {sensor_data}")
+    logger.debug("  Sensor data: %s", sensor_data)
 
     # Save data to disk
     folder = data.get("folder")
     data_file = f"{folder}/{DATA_FILE_NAME}"
-    print(f"  Save file: {data_file}")
+    logger.info("  Save file: %s", data_file)
 
     has_data = sensor_data.get("approaching") or sensor_data.get("retreating")
 
     if not has_data and os.path.exists(data_file):
-        logger.warning(f"  No sensor data from HA — preserving existing {data_file}")
+        logger.warning("  No sensor data from HA — preserving existing %s", data_file)
     else:
         with open(data_file, "w", encoding="utf-8") as f:
             json.dump(sensor_data, f, indent=4)
-            print("  File saved")
+        logger.info("  File saved")
 
     # Summarize Data
     summary_file = f"{folder}/{SUMMARY_FILE_NAME}"
@@ -196,11 +202,11 @@ def handle_event(data):
     data["data_file"] = data_file
     data["summary_file"] = summary_file
     payload = json.dumps(data)
-    print(f"  New Payload: {payload}")
+    logger.debug("  New Payload: %s", payload)
 
     # Publish message for next task
     client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
-    print(f"  Message Published: {MQTT_PUBLISH_TOPIC}")
+    logger.info("  Message Published: %s", MQTT_PUBLISH_TOPIC)
 
 
 # Configure MQTT and wait...

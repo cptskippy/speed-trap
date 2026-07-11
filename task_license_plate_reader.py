@@ -4,24 +4,15 @@ task_license_plate_reader.py
 Subscribes to an MQTT topic and performs LPR activities
 against specified images.
 """
+import logging
 import asyncio
 import json
 from datetime import datetime
-import logging
 import signal
 import sys
 from shared import load_config, MqttClientWrapper, OpenAILicensePlateReader, Protect
 
-
-# logging.basicConfig(
-#     level=logging.DEBUG,  # or INFO, WARNING
-#     format='[%(levelname)s] %(name)s: %(message)s'
-# )
-
 logger = logging.getLogger(__name__)
-# logger.debug("Debug message")
-# logger.info("Info message")
-# logger.warning("Warning message")
 
 
 # Load configuration from yaml
@@ -67,50 +58,51 @@ else:
 
 def on_connect(client, userdata, flags, reason_code, properties):
     """Subscribe to topic on successful connection."""
-
     if reason_code == 0:
         client.subscribe(MQTT_SUBSCRIBE_TOPIC, MQTT_QOS)
-        print(f"Subscribed to topic: {MQTT_SUBSCRIBE_TOPIC}")
+        logger.info("Subscribed to topic: %s", MQTT_SUBSCRIBE_TOPIC)
+
 
 def on_message(client, userdata, message):
     """Processes the message from MQTT Broker"""
     try:
         payload = message.payload.decode('utf-8')
         data = json.loads(payload)
-        print("\nLPR Event Received:")
-        print(f"  Timestamp: {data.get('timestamp')}")
-        print(f"  Sensor ID: {data.get('sensor_id')}")
-        print(f"  Speed: {data.get('speed')} {data.get('uom')}")
-        print(f"  Folder: {data.get('folder')}")
-        print(f"  Data File: {data.get('data_file')}")
-        print(f"  Payload: {payload}")
+        logger.info("LPR Event Received:")
+        logger.info("  Timestamp: %s", data.get('timestamp'))
+        logger.info("  Sensor ID: %s", data.get('sensor_id'))
+        logger.info("  Speed: %s %s", data.get('speed'), data.get('uom'))
+        logger.info("  Folder: %s", data.get('folder'))
+        logger.info("  Data File: %s", data.get('data_file'))
+        logger.debug("  Payload: %s", payload)
 
-        handle_event(data)
+        handle_event(client, data)
 
-    except json.JSONDecodeError:
-        print(f"Received invalid JSON: {message}")
+    except json.JSONDecodeError as e:
+        logger.error("Received invalid JSON: %s", e)
     except Exception as e:
-        print(f"Error processing message: {e}")
+        logger.exception("Error processing message: %s", e)
 
 
 def update_summary(summary_path, license_plate, vehicle_color, vehicle_type):
-    """Opens the summary file and updates the license_plate"""        
+    """Opens the summary file and updates the license_plate"""
 
-    logger.debug(f"  Opening summary data: {summary_path}")
+    logger.debug("  Opening summary data: %s", summary_path)
 
     with open(summary_path, "r") as f:
         summary_data = json.load(f)
 
-    logger.debug(f"  Updating summary data...")
+    logger.debug("  Updating summary data...")
     summary_data["license_plate"] = license_plate
     summary_data["vehicle_color"] = vehicle_color
     summary_data["vehicle_type"] = vehicle_type
 
-    logger.debug(f"  Saving summary data...")
+    logger.debug("  Saving summary data...")
 
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary_data, f, indent=4)
-        print("  File saved")
+    logger.info("  Summary file saved")
+
 
 def get_lpr_reads(eventdata):
     results = []
@@ -118,7 +110,7 @@ def get_lpr_reads(eventdata):
     for camera in LPR_CAMERAS:
 
         source = ""
-    
+
         if LPR_METHOD == "OPENAI":
             # Generate Path
             file_name = camera["file_name"]
@@ -130,12 +122,12 @@ def get_lpr_reads(eventdata):
             cameras = NVR_CLIENT.get_cameras([camera_name])
             if len(cameras) > 0:
                 source = cameras[0]["id"]
-                
-        print(f"Source: {source}")
+
+        logger.info("Source: %s", source)
 
         timestamp = eventdata.get("timestamp")
         occurred = datetime.fromisoformat(timestamp)
-    
+
         # Perform LPR
         results.extend(LPR_CLIENT.get_license_plate_reads(source=source,
                                                      dt=occurred,
@@ -144,7 +136,7 @@ def get_lpr_reads(eventdata):
     return results
 
 
-def handle_event(data):
+def handle_event(client, data):
     """Performs a license plate read."""
     status = "failure"
     error = "No result"
@@ -190,27 +182,27 @@ def handle_event(data):
         vehicle_type = result.vehicle_type
 
     if status == "success":
-      # Update Summary file
-      summary_path = data.get("summary_file")
+        # Update Summary file
+        summary_path = data.get("summary_file")
 
-      update_summary(summary_path, plate, vehicle_color, vehicle_type)
-      print(f"  License plate read: {plate}")
+        update_summary(summary_path, plate, vehicle_color, vehicle_type)
+        logger.info("  License plate read: %s", plate)
     else:
-      print(f"  No plate data: {error}")
+        logger.warning("  No plate data: %s", error)
 
 
     # Update Payload
     payload = json.dumps(data)
-    print(f"  New Payload: {payload}")
+    logger.debug("  New Payload: %s", payload)
 
     # Publish message for next task
     client.publish(MQTT_PUBLISH_TOPIC, payload, MQTT_QOS)
-    print(f"  Message Published: {MQTT_PUBLISH_TOPIC}")
+    logger.info("  Message Published: %s", MQTT_PUBLISH_TOPIC)
 
 
 def shutdown(*_args):
     """Gracefully closes the NVR client's connection before exiting."""
-    print("\nShutting down, closing NVR client...")
+    logger.info("Shutting down, closing NVR client...")
     NVR_CLIENT.close()
     sys.exit(0)
 
