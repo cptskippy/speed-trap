@@ -37,7 +37,7 @@ class MqttClientWrapper:
 
     def connect(self, on_connect = None, on_message = None, on_disconnect = None):
         """Connect to defined MQTT Server"""
-        print("Connecting to MQTT:", self.hostname, self.port)
+        logger.info("Connecting to MQTT: %s:%s", self.hostname, self.port)
 
         self.custom_on_connect = on_connect
         self.custom_on_message = on_message
@@ -51,26 +51,26 @@ class MqttClientWrapper:
         self.client.connect(self.hostname, self.port, self.timeout)
 
         try:
-            print("Starting MQTT client loop...")
+            logger.info("Starting MQTT client loop...")
             self.client.loop_forever()
         except KeyboardInterrupt:
-            print("\nInterrupted by user. Exiting.")
+            logger.info("Interrupted by user. Exiting.")
             self.client.disconnect()
 
     def on_connect(self, client, userdata, flags, reason_code, properties):
         """Callback when connected to MQTT Broker"""
 
         if reason_code == 0:
-            print("Connected to MQTT Broker.")
+            logger.info("Connected to MQTT Broker.")
 
             if flags.session_present:
-                print("Session present.")
+                logger.info("Session present.")
 
         if reason_code > 0:
-            print(f"Failed to connect, return code {reason_code}")
+            logger.error("Failed to connect, return code %s", reason_code)
 
         if self.custom_on_connect is not None:
-            print("Calling user defined on_connect...")
+            logger.debug("Calling user defined on_connect...")
             self.custom_on_connect(client, userdata, flags, reason_code, properties)
 
     def on_message(self, client, userdata, message):
@@ -78,26 +78,26 @@ class MqttClientWrapper:
 
         try:
             payload = message.payload.decode('utf-8')
-            print("\nMessage Received:")
-            logger.debug(f"  payload: {payload}")
+            logger.debug("Message Received:")
+            logger.debug("  payload: %s", payload)
 
         except Exception as e:
-            print(f"Error processing message: {e}")
+            logger.error("Error processing message: %s", e)
 
         if self.custom_on_message is not None:
-            print("  Calling user defined on_message...")
+            logger.debug("Calling user defined on_message...")
             self.custom_on_message(client, userdata, message)
 
     def on_disconnect(self, client, userdata, flags, reason_code, properties):
         """Callback when disconnected to MQTT Broker"""
 
         if reason_code == 0:
-            print("Disconnected from MQTT broker.")
+            logger.info("Disconnected from MQTT broker.")
         if reason_code > 0:
-            print(f"Failed to disconnect, return code {reason_code}")
+            logger.error("Failed to disconnect, return code %s", reason_code)
 
         if self.custom_on_disconnect is not None:
-            print("Calling user defined on_disconnect...")
+            logger.debug("Calling user defined on_disconnect...")
             self.custom_on_disconnect(client, userdata, flags, reason_code, properties)
 
     def publish(self, topic, payload, qos=1, retain=False):
@@ -105,11 +105,11 @@ class MqttClientWrapper:
         return self.client.publish(topic, payload, qos, retain)
 
     def subscribe(self, topic, qos=1):
-        """Publish message to MQTT Broker"""
-        return self.client.subscribe(topic,qos)
+        """Subscribe to topic on MQTT Broker"""
+        return self.client.subscribe(topic, qos)
 
     def unsubscribe(self, topic):
-        """Publish message to MQTT Broker"""
+        """Unsubscribe from topic on MQTT Broker"""
         return self.client.unsubscribe(topic)
 
     def disconnect(self):

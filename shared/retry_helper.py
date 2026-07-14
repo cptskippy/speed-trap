@@ -3,8 +3,11 @@ retry_helper.py
 
 Provides retry-with-backoff functionality to replace hard-coded time.sleep() delays.
 """
+import logging
 import time
 from typing import Callable, Any
+
+logger = logging.getLogger(__name__)
 
 
 def retry_with_backoff(
@@ -52,7 +55,7 @@ def retry_with_backoff(
                 raise ValueError(f"Result was empty/unacceptable (attempt {attempt + 1}/{max_attempts})")
 
             if attempt > 0:
-                print(f"  Succeeded on attempt {attempt + 1}/{max_attempts}")
+                logger.info("Succeeded on attempt %d/%d", attempt + 1, max_attempts)
 
             return result
 
@@ -60,11 +63,11 @@ def retry_with_backoff(
             last_exception = e
             if attempt < max_attempts - 1:
                 delay = min(base_delay * (2 ** attempt), max_delay)
-                print(f"  Attempt {attempt + 1}/{max_attempts} failed: {e}")
-                print(f"  Retrying in {delay}s...")
+                logger.warning("Attempt %d/%d failed: %s", attempt + 1, max_attempts, e)
+                logger.info("Retrying in %ds...", delay)
                 time.sleep(delay)
             else:
-                print(f"  All {max_attempts} attempts exhausted.")
+                logger.error("All %d attempts exhausted.", max_attempts)
 
     if last_exception is not None:
         raise last_exception
